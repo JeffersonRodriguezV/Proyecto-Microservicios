@@ -1,0 +1,17 @@
+GET http://localhost:8080/empleados/333
+
+Content-Type: application/json
+
+{
+  "nombre": "Juan",
+  "apellido": "Perez",
+  "email": "juan.perez@empresa.com",
+  "numeroEmpleado": "EMP-001",
+  "cargo": "Desarrollador",
+  "area": "Tecnologia",
+  "departamentoId": "DEP-001",
+  "fechaIngreso": "2026-08-08",
+  "estado": "ACTIVO",
+
+
+}
