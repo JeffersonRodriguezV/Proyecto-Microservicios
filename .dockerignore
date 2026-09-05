@@ -1,0 +1,4 @@
+target/*.original
+.git
+.idea
+*.iml
