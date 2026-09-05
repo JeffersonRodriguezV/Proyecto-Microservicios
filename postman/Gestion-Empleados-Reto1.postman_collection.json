@@ -1,0 +1,174 @@
+{
+  "info": {
+    "_postman_id": "5cf284ae-e0ca-4d80-9bda-8f1d5aba38dd",
+    "name": "Gestion-Empleados-Reto1",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "49129295",
+    "_collection_link": "https://go.postman.co/collection/49129295-5cf284ae-e0ca-4d80-9bda-8f1d5aba38dd?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Registrar un empleado",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"nombre\": \"Juan\",\r\n  \"apellido\": \"Pérez\",\r\n  \"email\": \"juan.perez@empresa.com\",\r\n  \"numeroEmpleado\": \"EMP-2026-001\",\r\n  \"cargo\": \"Desarrollador Senior\",\r\n  \"area\": \"Tecnología\",\r\n  \"departamentoId\": \"IT\",\r\n  \"fechaIngreso\": \"2026-02-10\",\r\n  \"estado\": \"ACTIVO\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8080/empleados",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "empleados"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Consultar un empleado existente",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/empleados/1",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "empleados",
+            "1"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Consultar empleado inexistente",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/empleados/2",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "empleados",
+            "2"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Registrar empleado duplicado (Email)",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"nombre\": \"Juan\",\r\n  \"apellido\": \"Pérez\",\r\n  \"email\": \"juan.perez@empresa.com\",\r\n  \"numeroEmpleado\": \"EMP-2026-002\",\r\n  \"cargo\": \"Desarrollador Senior\",\r\n  \"area\": \"Tecnología\",\r\n  \"departamentoId\": \"IT\",\r\n  \"fechaIngreso\": \"2026-02-10\",\r\n  \"estado\": \"ACTIVO\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8080/empleados",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "empleados"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Registrar empleado duplicado (Número empleado)",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"nombre\": \"Juan\",\r\n  \"apellido\": \"Pérez\",\r\n  \"email\": \"juan@empresa.com\",\r\n  \"numeroEmpleado\": \"EMP-2026-001\",\r\n  \"cargo\": \"Desarrollador Senior\",\r\n  \"area\": \"Tecnología\",\r\n  \"departamentoId\": \"IT\",\r\n  \"fechaIngreso\": \"2026-02-10\",\r\n  \"estado\": \"ACTIVO\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8080/empleados",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "empleados"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Ruta no soportada",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/clientes",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "clientes"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Metodo no soportado",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/empleados/1",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "empleados",
+            "1"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}
