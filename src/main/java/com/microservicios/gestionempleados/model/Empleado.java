@@ -1,7 +1,11 @@
 package com.microservicios.gestionempleados.model;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.microservicios.gestionempleados.model.enume.EstadoEmpleado;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDate;
 
@@ -13,46 +17,41 @@ public class Empleado {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
+    @NotBlank(message = "El nombre es obligatorio")
     @Column(nullable = false)
     private String nombre;
 
+    @NotBlank(message = "El apellido es obligatorio")
     @Column(nullable = false)
     private String apellido;
 
+    @NotBlank(message = "El email es obligatorio")
+    @Email(message = "El email debe tener un formato válido")
     @Column(nullable = false, unique = true)
     private String email;
 
+    @NotBlank(message = "El numeroEmpleado es obligatorio")
     @Column(nullable = false, unique = true)
     private String numeroEmpleado;
 
-    /**
-     * Cargo que desempeña el empleado.
-     */
+    @NotBlank(message = "El cargo es obligatorio")
     @Column(nullable = false)
     private String cargo;
 
-    /**
-     * Área a la que pertenece el empleado.
-     */
+    @NotBlank(message = "El area es obligatoria")
     @Column(nullable = false)
     private String area;
 
-    /**
-     * Identificador del departamento al que pertenece el empleado.
-     */
+    @NotBlank(message = "El departamentoId es obligatorio")
     @Column(name = "departamento_id", nullable = false)
     private String departamentoId;
 
-    /**
-     * Fecha en la que el empleado ingresó a la organización.
-     */
+    @NotNull(message = "La fechaIngreso es obligatoria")
     @Column(name = "fecha_ingreso", nullable = false)
     private LocalDate fechaIngreso;
 
-    /**
-     * Estado actual del empleado.
-     */
     @Enumerated(EnumType.STRING)
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
     @Column(nullable = false)
     private EstadoEmpleado estado;
 
