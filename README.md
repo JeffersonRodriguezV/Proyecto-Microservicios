@@ -98,11 +98,27 @@ Content-Type: application/json
 }
 ```
 
+**Validaciones de campos:**
+
+Todos los campos son obligatorios (`nombre`, `apellido`, `email`, `numeroEmpleado`,
+`cargo`, `area`, `departamentoId`, `fechaIngreso`). Adicionalmente:
+- `email` debe tener un formato de correo válido.
+- `fechaIngreso` debe tener el formato `YYYY-MM-DD`.
+
 **Respuestas:**
 | Código | Caso |
 |---|---|
 | `200 OK` | Empleado registrado correctamente. Devuelve el empleado creado (con `id` asignado). |
-| `400 Bad Request` | El `email` o el `numeroEmpleado` ya están registrados. Devuelve un mensaje descriptivo del error. |
+| `400 Bad Request` | Uno o más campos son inválidos o están vacíos, el `email`/`numeroEmpleado` ya están registrados, o el JSON tiene un formato inválido (por ejemplo, fecha mal formateada). |
+
+**Ejemplo de respuesta de error (400):**
+```json
+{
+  "status": 400,
+  "mensaje": "nombre: El nombre es obligatorio",
+  "timestamp": "2026-09-08T14:30:00"
+}
+```
 
 ### Consultar un empleado por id
 
@@ -114,18 +130,41 @@ GET /empleados/{id}
 | Código | Caso |
 |---|---|
 | `200 OK` | Devuelve la información del empleado solicitado. |
-| `404 Not Found` | No existe un empleado con ese id. Devuelve: `El empleado con id {id} no existe` |
+| `404 Not Found` | No existe un empleado con ese id. |
+
+**Ejemplo de respuesta de error (404):**
+```json
+{
+  "status": 404,
+  "mensaje": "El empleado con id 999 no existe",
+  "timestamp": "2026-09-08T14:30:00"
+}
+```
 
 ### Rutas o métodos no soportados
 
 Cualquier ruta inexistente, o cualquier método HTTP no definido para una ruta
-existente, responde:
+existente, responde con `404 Not Found`:
 
+```json
+{
+  "status": 404,
+  "mensaje": "Recurso no encontrado",
+  "timestamp": "2026-09-08T14:30:00"
+}
 ```
-404 Not Found
-```
-```
-Recurso no encontrado
+
+### Formato general de las respuestas de error
+
+Todas las respuestas de error de la API (validaciones, duplicados, rutas no
+encontradas, JSON inválido, etc.) siguen esta misma estructura JSON:
+
+```json
+{
+  "status": 0,
+  "mensaje": "string",
+  "timestamp": "yyyy-MM-ddTHH:mm:ss"
+}
 ```
 
 ## Pruebas
@@ -150,6 +189,11 @@ Para importarla en Postman: **File → Import** y seleccionar el archivo.
 | 5 | Consultar empleado inexistente | `GET` | `/empleados/{id}` | `404 Not Found` |
 | 6 | Ruta no soportada | `GET` | `/clientes` | `404 Not Found` |
 | 7 | Método no soportado | `DELETE` | `/empleados/{id}` | `404 Not Found` |
+
+> **Nota:** las validaciones de campos (campo vacío, email inválido, fecha mal
+> formateada) se muestran modificando en vivo el body de la solicitud
+> "Registrar un empleado" (#1), en lugar de tener una solicitud guardada por
+> cada caso.
 
 ## Estructura del proyecto
 
