@@ -18,32 +18,32 @@ public class Empleado {
     private Integer id;
 
     @NotBlank(message = "El nombre es obligatorio")
-    @Column(nullable = false)
+    @Column(name = "nombre", nullable = false, length = 100)
     private String nombre;
 
     @NotBlank(message = "El apellido es obligatorio")
-    @Column(nullable = false)
+    @Column(name = "apellido", nullable = false, length = 100)
     private String apellido;
 
     @NotBlank(message = "El email es obligatorio")
     @Email(message = "El email debe tener un formato válido")
-    @Column(nullable = false, unique = true)
+    @Column(name = "email", nullable = false, unique = true, length = 150)
     private String email;
 
     @NotBlank(message = "El numeroEmpleado es obligatorio")
-    @Column(nullable = false, unique = true)
+    @Column(name = "numero_empleado", nullable = false, unique = true, length = 50)
     private String numeroEmpleado;
 
     @NotBlank(message = "El cargo es obligatorio")
-    @Column(nullable = false)
+    @Column(name = "cargo", nullable = false, length = 100)
     private String cargo;
 
     @NotBlank(message = "El area es obligatoria")
-    @Column(nullable = false)
+    @Column(name = "area", nullable = false, length = 100)
     private String area;
 
     @NotBlank(message = "El departamentoId es obligatorio")
-    @Column(name = "departamento_id", nullable = false)
+    @Column(name = "departamento_id", nullable = false, length = 50)
     private String departamentoId;
 
     @NotNull(message = "La fechaIngreso es obligatoria")
@@ -52,7 +52,7 @@ public class Empleado {
 
     @Enumerated(EnumType.STRING)
     @JsonFormat(shape = JsonFormat.Shape.STRING)
-    @Column(nullable = false)
+    @Column(name = "estado", nullable = false, length = 30)
     private EstadoEmpleado estado;
 
     /**

@@ -59,12 +59,11 @@
 		</dependency>
 
 		<!-- ====================================== -->
-		<!-- BASE DE DATOS H2                       -->
-		<!-- Para desarrollo/pruebas               -->
+		<!-- BASE DE DATOS MYSQL                     -->
 		<!-- ====================================== -->
 		<dependency>
-			<groupId>com.h2database</groupId>
-			<artifactId>h2</artifactId>
+			<groupId>com.mysql</groupId>
+			<artifactId>mysql-connector-j</artifactId>
 			<scope>runtime</scope>
 		</dependency>
 
