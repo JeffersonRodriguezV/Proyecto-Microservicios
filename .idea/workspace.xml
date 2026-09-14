@@ -5,28 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="b10edb2d-8ef8-4213-bf08-12620e332918" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.dockerignore" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gitattributes" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.mvn/wrapper/maven-wrapper.properties" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Dockerfile" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/mvnw" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/mvnw.cmd" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/postman/Gestion-Empleados-Reto1.postman_collection.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/microservicios/gestionempleados/GestionempleadosApplication.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/microservicios/gestionempleados/controller/EmpleadoController.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/microservicios/gestionempleados/exception/CustomErrorController.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/microservicios/gestionempleados/exception/ErrorResponse.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/microservicios/gestionempleados/exception/GlobalExceptionHandler.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/microservicios/gestionempleados/model/Empleado.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/microservicios/gestionempleados/model/enume/EstadoEmpleado.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/microservicios/gestionempleados/repository/EmpleadoRepository.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/microservicios/gestionempleados/request.http" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/microservicios/gestionempleados/service/EmpleadoService.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/application.properties" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/test/java/com/microservicios/gestionempleados/GestionempleadosApplicationTests.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -51,9 +30,69 @@
   <component name="MavenImportPreferences">
     <option name="generalSettings">
       <MavenGeneralSettings>
-        <option name="mavenHomeTypeForPersistence" value="WRAPPER" />
+        <option name="customMavenHome" value="C:\Program Files\apache-maven-3.9.16" />
+        <option name="mavenHomeTypeForPersistence" value="CUSTOM" />
       </MavenGeneralSettings>
     </option>
+  </component>
+  <component name="NextEditCompletionFeaturesState">
+    <decayedCancelled>
+      <entry key="MS100" value="1.0" />
+      <entry key="MS500" value="1.0" />
+      <entry key="S2" value="1.0" />
+      <entry key="S5" value="1.0000000102937256" />
+      <entry key="S10" value="1.0005391490140996" />
+      <entry key="S30" value="2.756049142101723" />
+      <entry key="S60" value="17.994907337286875" />
+      <entry key="M2" value="56.18365800196475" />
+      <entry key="M5" value="114.31667922810206" />
+      <entry key="M10" value="145.32489638028844" />
+      <entry key="M15" value="157.47784482865762" />
+      <entry key="M30" value="170.6726413057887" />
+      <entry key="H1" value="177.68877612291013" />
+      <entry key="H2" value="181.3067272219712" />
+      <entry key="H4" value="183.14384976095616" />
+      <entry key="D1" value="184.68931180137412" />
+      <entry key="W1" value="184.95558329360938" />
+    </decayedCancelled>
+    <decayedSelected>
+      <entry key="MS100" value="0.0" />
+      <entry key="MS500" value="0.0" />
+      <entry key="S2" value="0.0" />
+      <entry key="S5" value="0.0" />
+      <entry key="S10" value="0.0" />
+      <entry key="S30" value="0.0" />
+      <entry key="S60" value="0.0" />
+      <entry key="M2" value="0.0" />
+      <entry key="M5" value="0.0" />
+      <entry key="M10" value="0.0" />
+      <entry key="M15" value="0.0" />
+      <entry key="M30" value="0.0" />
+      <entry key="H1" value="0.0" />
+      <entry key="H2" value="0.0" />
+      <entry key="H4" value="0.0" />
+      <entry key="D1" value="0.0" />
+      <entry key="W1" value="0.0" />
+    </decayedSelected>
+    <decayedShown>
+      <entry key="MS100" value="0.8766057213160351" />
+      <entry key="MS500" value="0.974004268543241" />
+      <entry key="S2" value="0.9934367347173356" />
+      <entry key="S5" value="0.9973695164108249" />
+      <entry key="S10" value="0.9992140056125829" />
+      <entry key="S30" value="2.7510105753174576" />
+      <entry key="S60" value="17.978911307329305" />
+      <entry key="M2" value="56.162366851555554" />
+      <entry key="M5" value="114.30116295484576" />
+      <entry key="M10" value="145.31540194633413" />
+      <entry key="M15" value="157.47107290717534" />
+      <entry key="M30" value="170.6690183365272" />
+      <entry key="H1" value="177.68690223200775" />
+      <entry key="H2" value="181.3057742640793" />
+      <entry key="H4" value="183.14336922646726" />
+      <entry key="D1" value="184.68923114452164" />
+      <entry key="W1" value="184.9555717572382" />
+    </decayedShown>
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 8,
@@ -67,18 +106,31 @@
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
     "Docker.Dockerfile.executor": "Run",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RequestMappingsPanelOrder0": "0",
+    "RequestMappingsPanelOrder1": "1",
+    "RequestMappingsPanelWidth0": "75",
+    "RequestMappingsPanelWidth1": "75",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
     "Spring Boot.GestionempleadosApplication.executor": "Run",
     "codeWithMe.voiceChat.enabledByDefault": "false",
+    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
     "git-widget-placeholder": "main",
+    "junie.onboarding.icon.badge.shown": "true",
     "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "C:/Users/soloq/OneDrive/Documents/Microservicios",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm"
+    "nodejs_package_manager_path": "npm",
+    "project.structure.last.edited": "Project",
+    "project.structure.proportion": "0.0",
+    "project.structure.side.proportion": "0.0",
+    "settings.editor.selected.configurable": "MavenSettings",
+    "to.speed.mode.migration.done": "true"
   }
 }]]></component>
   <component name="RunManager" selected="Spring Boot.GestionempleadosApplication">
@@ -149,5 +201,9 @@
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="XSLT-Support.FileAssociations.UIState">
+    <expand />
+    <select />
   </component>
 </project>
