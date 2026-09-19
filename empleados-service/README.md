@@ -205,3 +205,48 @@ src/main/java/com/microservicios/gestionempleados/
 ├── model/         # Entidades y enums
 └── exception/     # Manejo global de errores
 ```
+
+## Reto 2 — Integración con departamentos-service
+
+### Persistencia
+
+El servicio ya migró de almacenamiento en memoria a MySQL desde el
+Reto 1 (JPA + `ddl-auto=validate`, esquema creado vía `init.sql`).
+
+### Nueva validación: existencia del departamento
+
+Antes de registrar un empleado, además de las validaciones de `email`
+y `numeroEmpleado` únicos, se consulta a `departamentos-service` para
+verificar que el `departamentoId` exista.
+
+### Campo `departamentoValidado`
+
+Se agregó esta columna (booleana) al modelo de `Empleado` para
+distinguir tres resultados posibles de esa consulta:
+
+| Resultado de la consulta | Efecto |
+|---|---|
+| El departamento existe (200) | Se registra el empleado, `departamentoValidado: true` |
+| El departamento NO existe (404) | Se rechaza el registro con `400 Bad Request` |
+| `departamentos-service` no responde (tras agotar reintentos) | Se registra el empleado igualmente, `departamentoValidado: false` (pendiente de validación) |
+
+### Timeout y reintentos
+
+La llamada HTTP hacia `departamentos-service` usa un `RestClient` con
+timeout de conexión y lectura de 3 segundos cada uno. Si falla (timeout,
+conexión rechazada, error 5xx — nunca ante un 404 real), se reintenta
+hasta 4 veces en total (intento inicial + 3 reintentos) con espera
+creciente: 1s → 2s → 4s, implementado con Spring Retry (`@Retryable` +
+`@Backoff` + `@Recover`).
+
+### Decisión: qué pasa cuando se agotan los reintentos
+
+Se decidió **aceptar el registro del empleado** marcándolo como
+pendiente de validación, en vez de rechazarlo. Se priorizó que el
+sistema siga funcionando aunque `departamentos-service` esté caído,
+sobre la garantía estricta de que todo `departamentoId` esté siempre
+confirmado en el momento del registro. Queda como trabajo futuro (fuera
+del alcance del Reto 2) un proceso que revise periódicamente los
+empleados con `departamentoValidado: false` y reintente la validación.
+
+### Variable de entorno
