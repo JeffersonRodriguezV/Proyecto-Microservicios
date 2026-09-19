@@ -24,6 +24,7 @@ services:
       DB_URL: jdbc:mysql://database-empleados:3306/empleados_db
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
+      DEPARTAMENTOS_SERVICE_URL: http://departamentos-service:8081
     depends_on:
       database-empleados:
         condition: service_healthy

@@ -55,6 +55,9 @@ public class Empleado {
     @Column(name = "estado", nullable = false, length = 30)
     private EstadoEmpleado estado;
 
+    @Column(name = "departamento_validado", nullable = false)
+    private Boolean departamentoValidado = true;
+
     /**
      * Constructor completo.
      */
@@ -68,7 +71,8 @@ public class Empleado {
             String area,
             String departamentoId,
             LocalDate fechaIngreso,
-            EstadoEmpleado estado
+            EstadoEmpleado estado,
+            Boolean departamentoValidado
     ) {
         this.id = id;
         this.nombre = nombre;
@@ -80,8 +84,8 @@ public class Empleado {
         this.departamentoId = departamentoId;
         this.fechaIngreso = fechaIngreso;
         this.estado = estado;
+        this.departamentoValidado = departamentoValidado;
     }
-
     /**
      * Constructor vacío requerido por JPA.
      */
@@ -166,5 +170,13 @@ public class Empleado {
 
     public void setEstado(EstadoEmpleado estado) {
         this.estado = estado;
+    }
+
+    public Boolean getDepartamentoValidado() {
+        return departamentoValidado;
+    }
+
+    public void setDepartamentoValidado(Boolean departamentoValidado) {
+        this.departamentoValidado = departamentoValidado;
     }
 }
