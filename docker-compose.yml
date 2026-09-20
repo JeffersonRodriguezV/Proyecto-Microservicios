@@ -1,38 +1,161 @@
 services:
+
+  # =========================================================
+  # BASE DE DATOS - EMPLEADOS
+  # =========================================================
   database-empleados:
     image: mysql:8.0
+    container_name: database-empleados
+
     environment:
-      MYSQL_DATABASE: empleados_db
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_EMPLEADOS_NAME:-empleados_db}
+      MYSQL_USER: ${DB_EMPLEADOS_USER:-empleados_user}
+      MYSQL_PASSWORD: ${DB_EMPLEADOS_PASSWORD:-empleados_pass}
+      MYSQL_ROOT_PASSWORD: ${DB_EMPLEADOS_ROOT_PASSWORD:-root_empleados_pass}
+
     volumes:
-      - empleados-data:/var/lib/mysql
-      - ./empleados-service/database/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      # Volumen persistente: `docker compose down`
+      - vol-empleados:/var/lib/mysql
+      - ./empleados-service/database:/docker-entrypoint-initdb.d:ro
+
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      # 127.0.0.1 fuerza conexión TCP: el servidor temporal de inicialización
+      # solo escucha por socket, así que no da un falso "healthy".
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h 127.0.0.1 -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent"
+        ]
       interval: 5s
       timeout: 5s
       retries: 12
-      start_period: 20s
-    networks:
-      - empleados-network
+      start_period: 30s
 
+    networks:
+      - microservices-network
+
+  # =========================================================
+  # BASE DE DATOS - DEPARTAMENTOS
+  # =========================================================
+  database-departamentos:
+    image: postgres:16-alpine
+    container_name: database-departamentos
+
+    environment:
+      POSTGRES_DB: ${DB_DEPARTAMENTOS_NAME:-departamentos_db}
+      POSTGRES_USER: ${DB_DEPARTAMENTOS_USER:-departamentos_user}
+      POSTGRES_PASSWORD: ${DB_DEPARTAMENTOS_PASSWORD:-departamentos_pass}
+
+    volumes:
+      - vol-departamentos:/var/lib/postgresql/data
+      - ./departamentos-service/database:/docker-entrypoint-initdb.d:ro
+
+    healthcheck:
+      # $$ -> se expande dentro del contenedor, sin repetir valores
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+    networks:
+      - microservices-network
+
+
+  # =========================================================
+  # SERVICIO DE DEPARTAMENTOS
+  # =========================================================
+  departamentos-service:
+    build:
+      context: ./departamentos-service
+
+    container_name: departamentos-service
+    restart: unless-stopped
+
+    ports:
+      - "8081:8081"
+
+    environment:
+      DB_URL: postgresql://database-departamentos:5432/${DB_DEPARTAMENTOS_NAME:-departamentos_db}
+      DB_USERNAME: ${DB_DEPARTAMENTOS_USER:-departamentos_user}
+      DB_PASSWORD: ${DB_DEPARTAMENTOS_PASSWORD:-departamentos_pass}
+
+    depends_on:
+      database-departamentos:
+        # Arranque ordenado: NO inicia hasta que PostgreSQL esté LISTO
+        condition: service_healthy
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8081/departamentos', timeout=3)"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+    networks:
+      - microservices-network
+
+
+  # =========================================================
+  # SERVICIO DE EMPLEADOS
+  # =========================================================
   empleados-service:
-    build: ./empleados-service
+    build:
+      context: ./empleados-service
+
+    container_name: empleados-service
+    restart: unless-stopped
+
     ports:
       - "8080:8080"
+
     environment:
-      DB_URL: jdbc:mysql://database-empleados:3306/empleados_db
-      DB_USERNAME: ${DB_USERNAME}
-      DB_PASSWORD: ${DB_PASSWORD}
+
+      DB_URL: jdbc:mysql://database-empleados:3306/${DB_EMPLEADOS_NAME:-empleados_db}?allowPublicKeyRetrieval=true&useSSL=false
+      DB_USERNAME: ${DB_EMPLEADOS_USER:-empleados_user}
+      DB_PASSWORD: ${DB_EMPLEADOS_PASSWORD:-empleados_pass}
+
       DEPARTAMENTOS_SERVICE_URL: http://departamentos-service:8081
+
+
+
     depends_on:
       database-empleados:
+        # Arranque ordenado: espera a que MySQL esté LISTO (no solo arrancado)
         condition: service_healthy
+      departamentos-service:
+        # Dependencia SOLO de arranque.
+        condition: service_started
+
+    # Healthcheck propio.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/empleados || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
     networks:
-      - empleados-network
+      - microservices-network
 
-volumes:
-  empleados-data:
 
+# =========================================================
+# RED INTERNA
+# =========================================================
 networks:
-  empleados-network:
+  microservices-network:
+    driver: bridge
+
+
+# =========================================================
+# VOLÚMENES PERSISTENTES
+# =========================================================
+volumes:
+  vol-empleados:
+  vol-departamentos:

@@ -4,7 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="b10edb2d-8ef8-4213-bf08-12620e332918" name="Changes" comment="" />
+    <list default="true" id="b10edb2d-8ef8-4213-bf08-12620e332918" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/empleados-service/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/empleados-service/Dockerfile" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -19,12 +24,12 @@
     &quot;assignee&quot;: &quot;Soloquie&quot;
   }
 }</component>
-  <component name="GithubPullRequestsUISettings">{
-  &quot;selectedUrlAndAccountId&quot;: {
-    &quot;url&quot;: &quot;https://github.com/JeffersonRodriguezV/Proyecto-Microservicios.git&quot;,
-    &quot;accountId&quot;: &quot;c6735cae-f92a-44fd-aa6d-c780e0cfc494&quot;
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/JeffersonRodriguezV/Proyecto-Microservicios.git",
+    "accountId": "b008100b-c9c8-4f5d-92a1-b74c03546a82"
   }
-}</component>
+}]]></component>
   <component name="MavenImportPreferences">
     <option name="generalSettings">
       <MavenGeneralSettings>
@@ -33,63 +38,67 @@
       </MavenGeneralSettings>
     </option>
   </component>
+  <component name="McpProjectServerCommands">
+    <commands />
+    <urls />
+  </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="2.2280056364123437" />
-      <entry key="MS500" value="4.938425528245997" />
-      <entry key="S2" value="9.866500231760083" />
-      <entry key="S5" value="22.946475626346125" />
-      <entry key="S10" value="39.983152794344754" />
-      <entry key="S30" value="67.50648615222052" />
-      <entry key="S60" value="78.82567878060763" />
-      <entry key="M2" value="85.5249589695332" />
-      <entry key="M5" value="90.10377083945234" />
-      <entry key="M10" value="92.05346645278574" />
-      <entry key="M15" value="93.03335454901645" />
-      <entry key="M30" value="95.69881707895824" />
-      <entry key="H1" value="113.1531930593532" />
-      <entry key="H2" value="165.98264373669582" />
-      <entry key="H4" value="236.01105868465785" />
-      <entry key="D1" value="345.4481839910335" />
-      <entry key="W1" value="371.4161197669132" />
+      <entry key="MS100" value="1.0037994334208424" />
+      <entry key="MS500" value="1.3444727867828394" />
+      <entry key="S2" value="2.9530127003268536" />
+      <entry key="S5" value="8.306741132290696" />
+      <entry key="S10" value="16.162700058021322" />
+      <entry key="S30" value="28.641437379590908" />
+      <entry key="S60" value="37.06884004915669" />
+      <entry key="M2" value="47.49213594230673" />
+      <entry key="M5" value="64.3060444207079" />
+      <entry key="M10" value="87.8179672952843" />
+      <entry key="M15" value="109.35671200397297" />
+      <entry key="M30" value="155.81350790573893" />
+      <entry key="H1" value="208.72175996720523" />
+      <entry key="H2" value="281.9046686764985" />
+      <entry key="H4" value="368.7890527602576" />
+      <entry key="D1" value="507.9513678319102" />
+      <entry key="W1" value="541.9574112498082" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
       <entry key="MS500" value="0.0" />
-      <entry key="S2" value="0.0" />
-      <entry key="S5" value="0.0" />
-      <entry key="S10" value="0.0" />
-      <entry key="S30" value="0.0" />
-      <entry key="S60" value="0.0" />
-      <entry key="M2" value="0.0" />
-      <entry key="M5" value="0.0" />
-      <entry key="M10" value="0.0" />
-      <entry key="M15" value="0.0" />
-      <entry key="M30" value="0.0" />
-      <entry key="H1" value="0.0" />
-      <entry key="H2" value="0.0" />
-      <entry key="H4" value="0.0" />
-      <entry key="D1" value="0.0" />
-      <entry key="W1" value="0.0" />
+      <entry key="S2" value="4.1151979357325584E-230" />
+      <entry key="S5" value="1.760987574579743E-92" />
+      <entry key="S10" value="1.3270220701178009E-46" />
+      <entry key="S30" value="5.100656163322814E-16" />
+      <entry key="S60" value="2.2584632304562285E-8" />
+      <entry key="M2" value="1.5028184289714522E-4" />
+      <entry key="M5" value="0.02956395992194439" />
+      <entry key="M10" value="0.17194173409019767" />
+      <entry key="M15" value="0.30921047763689674" />
+      <entry key="M30" value="0.5560669722586447" />
+      <entry key="H1" value="0.7456989823371389" />
+      <entry key="H2" value="0.8635386397475998" />
+      <entry key="H4" value="0.9292677976490964" />
+      <entry key="D1" value="0.9878480523652516" />
+      <entry key="W1" value="0.9982548978625289" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="2.126911529733974" />
-      <entry key="MS500" value="4.879890737268663" />
-      <entry key="S2" value="9.843810636604667" />
-      <entry key="S5" value="22.930960204690393" />
-      <entry key="S10" value="39.97051421046136" />
-      <entry key="S30" value="67.49914759445726" />
-      <entry key="S60" value="78.82130563466214" />
-      <entry key="M2" value="85.52255639296382" />
-      <entry key="M5" value="90.10274222376718" />
-      <entry key="M10" value="92.05289623658481" />
-      <entry key="M15" value="93.0329019326715" />
-      <entry key="M30" value="95.6984507203584" />
-      <entry key="H1" value="113.15279896403116" />
-      <entry key="H2" value="165.9821969479238" />
-      <entry key="H4" value="236.01067850076183" />
-      <entry key="D1" value="345.4480805898049" />
-      <entry key="W1" value="371.4161036477245" />
+      <entry key="MS100" value="0.9726756475832171" />
+      <entry key="MS500" value="1.1264359388153022" />
+      <entry key="S2" value="2.7759732364355676" />
+      <entry key="S5" value="8.213803588026051" />
+      <entry key="S10" value="16.110320536016268" />
+      <entry key="S30" value="28.621953376690772" />
+      <entry key="S60" value="37.058601273877194" />
+      <entry key="M2" value="47.48688071950375" />
+      <entry key="M5" value="64.33288433306939" />
+      <entry key="M10" value="87.98773102703863" />
+      <entry key="M15" value="109.66397840346156" />
+      <entry key="M30" value="156.36811331506985" />
+      <entry key="H1" value="209.4664148096622" />
+      <entry key="H2" value="282.7674146849542" />
+      <entry key="H4" value="369.71774962717404" />
+      <entry key="D1" value="508.93907273176546" />
+      <entry key="W1" value="542.955644006114" />
     </decayedShown>
   </component>
   <component name="ProjectColorInfo">{
@@ -104,6 +113,7 @@
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
     "Docker.Dockerfile.executor": "Run",
+    "Docker.docker-compose.yml: Compose Deployment.executor": "Run",
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RequestMappingsPanelOrder0": "0",
     "RequestMappingsPanelOrder1": "1",
@@ -129,11 +139,11 @@
     "project.structure.last.edited": "Modules",
     "project.structure.proportion": "0.0",
     "project.structure.side.proportion": "0.2",
-    "settings.editor.selected.configurable": "MavenSettings",
+    "settings.editor.selected.configurable": "preferences.pluginManager",
     "to.speed.mode.migration.done": "true"
   }
 }]]></component>
-  <component name="RunManager">
+  <component name="RunManager" selected="Docker.docker-compose.yml: Compose Deployment">
     <configuration default="true" type="JetRunConfigurationType">
       <module name="Microservicios" />
       <method v="2">
@@ -154,14 +164,27 @@
       </deployment>
       <method v="2" />
     </configuration>
+    <configuration default="true" type="docker-deploy" factoryName="docker-compose.yml" temporary="true">
+      <deployment type="docker-compose.yml" />
+      <method v="2" />
+    </configuration>
     <configuration default="true" type="docker-deploy" factoryName="dockerfile" temporary="true">
       <deployment type="dockerfile">
         <settings />
       </deployment>
       <method v="2" />
     </configuration>
+    <configuration name="docker-compose.yml: Compose Deployment" type="docker-deploy" factoryName="docker-compose.yml" temporary="true" server-name="Docker">
+      <deployment type="docker-compose.yml">
+        <settings>
+          <option name="sourceFilePath" value="docker-compose.yml" />
+        </settings>
+      </deployment>
+      <method v="2" />
+    </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Docker.docker-compose.yml: Compose Deployment" />
         <item itemvalue="Docker.Dockerfile" />
       </list>
     </recent_temporary>
@@ -169,8 +192,8 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-jdk-30f59d01ecdd-a203e0a19954-intellij.indexing.shared.core-IU-262.10315.125" />
-        <option value="bundled-js-predefined-d6986cc7102b-4abd2a77f808-JavaScript-IU-262.10315.125" />
+        <option value="bundled-jdk-30f59d01ecdd-34e2839f716b-intellij.indexing.shared.core-IU-262.9437.185" />
+        <option value="bundled-js-predefined-d6986cc7102b-4abd2a77f808-JavaScript-IU-262.9437.185" />
       </set>
     </attachedChunks>
   </component>

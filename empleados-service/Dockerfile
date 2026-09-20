@@ -19,6 +19,11 @@ RUN mvn -B clean package -DskipTests
 FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
+# wget se instala explícitamente porque la imagen base Alpine no lo
+# trae, y lo necesita el healthcheck definido en docker-compose.yml
+# (mismo requisito que el propio Reto 2 menciona: "requiere que curl
+# -o wget- esté en la imagen" para el healthcheck de un microservicio).
+RUN apk add --no-cache wget
 
 # Copiamos el jar generado en la etapa de build
 COPY --from=build /build/target/gestionempleados-0.0.1-SNAPSHOT.jar app.jar
