@@ -136,6 +136,19 @@ probadas manualmente contra el sistema completo corriendo en Docker:
 | numeroEmpleado duplicado | `400 Bad Request` |
 
 ### Persistencia: contraste `down` vs `down -v`
+### Pruebas automatizadas (Postman)
+
+Colección con pruebas  (`pm.test`) para las 10 validaciones
+clave del sistema completo:
+
+```
+/postman/Gestion-departamentos_empleados.postman_collection.json
+```
+
+**Cómo ejecutarla:**
+1. Reiniciar el sistema desde cero: `docker compose down -v && docker compose up --build`
+2. Importar el archivo en Postman (File → Import)
+3. Ejecutar con el **Collection Runner**
 
 ```bash
 docker compose down          # destruye los contenedores y conserva volúmenes
