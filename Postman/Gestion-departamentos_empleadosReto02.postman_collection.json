@@ -1,0 +1,387 @@
+{
+  "info": {
+    "_postman_id": "b3f1a2e4-8f21-4a3e-9c2b-reto2sistema",
+    "name": "Gestion-Departamentos-Empleados-Reto2",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Registrar un departamento",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code es 201', function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test('El body devuelve el departamento creado', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.id).to.eql('IT');",
+              "    pm.expect(jsonData.nombre).to.eql('Tecnologia');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"id\": \"IT\",\r\n  \"nombre\": \"Tecnologia\",\r\n  \"descripcion\": \"Departamento de TI\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8081/departamentos",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8081",
+          "path": ["departamentos"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Consultar un departamento existente",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code es 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Devuelve el departamento correcto', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.id).to.eql('IT');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8081/departamentos/IT",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8081",
+          "path": ["departamentos", "IT"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Consultar departamento inexistente",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code es 404', function () {",
+              "    pm.response.to.have.status(404);",
+              "});",
+              "",
+              "pm.test('El body tiene el formato uniforme de error', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('status');",
+              "    pm.expect(jsonData).to.have.property('mensaje');",
+              "    pm.expect(jsonData).to.have.property('timestamp');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8081/departamentos/NO-EXISTE",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8081",
+          "path": ["departamentos", "NO-EXISTE"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Registrar un empleado",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code es 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('departamentoValidado es true', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.departamentoValidado).to.eql(true);",
+              "    pm.collectionVariables.set('empleadoId', jsonData.id);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"nombre\": \"Carlos\",\r\n  \"apellido\": \"Ruiz\",\r\n  \"email\": \"carlos.ruiz@empresa.com\",\r\n  \"numeroEmpleado\": \"EMP-2026-100\",\r\n  \"cargo\": \"Analista\",\r\n  \"area\": \"Tecnologia\",\r\n  \"departamentoId\": \"IT\",\r\n  \"fechaIngreso\": \"2026-03-01\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8080/empleados",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["empleados"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Consultar un empleado existente",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code es 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Devuelve el empleado correcto', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.email).to.eql('carlos.ruiz@empresa.com');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/empleados/{{empleadoId}}",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["empleados", "{{empleadoId}}"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Consultar empleado inexistente",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code es 404', function () {",
+              "    pm.response.to.have.status(404);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/empleados/999999",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["empleados", "999999"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Registrar empleado duplicado (Email)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code es 400', function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test('El mensaje menciona el email', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.mensaje.toLowerCase()).to.include('email');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"nombre\": \"Otro\",\r\n  \"apellido\": \"Nombre\",\r\n  \"email\": \"carlos.ruiz@empresa.com\",\r\n  \"numeroEmpleado\": \"EMP-2026-102\",\r\n  \"cargo\": \"QA\",\r\n  \"area\": \"Tecnologia\",\r\n  \"departamentoId\": \"IT\",\r\n  \"fechaIngreso\": \"2026-03-03\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8080/empleados",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["empleados"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Registrar empleado duplicado (Número empleado)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code es 400', function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test('El mensaje menciona numeroEmpleado', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.mensaje.toLowerCase()).to.include('numeroempleado');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"nombre\": \"Otro\",\r\n  \"apellido\": \"Nombre\",\r\n  \"email\": \"otro@empresa.com\",\r\n  \"numeroEmpleado\": \"EMP-2026-100\",\r\n  \"cargo\": \"QA\",\r\n  \"area\": \"Tecnologia\",\r\n  \"departamentoId\": \"IT\",\r\n  \"fechaIngreso\": \"2026-03-03\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8080/empleados",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["empleados"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Registrar empleado con departamento inexistente",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code es 400', function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test('El mensaje menciona el departamentoId', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.mensaje.toLowerCase()).to.include('no-existe');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"nombre\": \"Ana\",\r\n  \"apellido\": \"Gomez\",\r\n  \"email\": \"ana.gomez@empresa.com\",\r\n  \"numeroEmpleado\": \"EMP-2026-101\",\r\n  \"cargo\": \"QA\",\r\n  \"area\": \"Ventas\",\r\n  \"departamentoId\": \"NO-EXISTE\",\r\n  \"fechaIngreso\": \"2026-03-02\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8080/empleados",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["empleados"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Listar todos los empleados",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code es 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Devuelve un arreglo con al menos 1 empleado', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.be.an('array');",
+              "    pm.expect(jsonData.length).to.be.at.least(1);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/empleados",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["empleados"]
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    { "key": "empleadoId", "value": "" }
+  ]
+}
