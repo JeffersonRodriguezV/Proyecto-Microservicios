@@ -3,7 +3,7 @@ package com.microservicios.gestionempleados.service;
 import com.microservicios.gestionempleados.model.Empleado;
 import com.microservicios.gestionempleados.model.enume.EstadoEmpleado;
 import com.microservicios.gestionempleados.repository.EmpleadoRepository;
-import com.microservicios.gestionempleados.client.DepartamentoClient;
+import com.microservicios.gestionempleados.client.DepartamentoValidador;
 import com.microservicios.gestionempleados.client.DepartamentoValidacionResultado;
 import org.springframework.stereotype.Service;
 
@@ -17,17 +17,18 @@ import java.util.Optional;
 public class EmpleadoService {
 
     private final EmpleadoRepository empleadoRepository;
-    private final DepartamentoClient departamentoClient;
+    private final DepartamentoValidador departamentoValidador;
 
     /**
      * Constructor del servicio.
      *
      * @param empleadoRepository repositorio de empleados
-     * @param departamentoClient cliente HTTP hacia departamentos-service
+     * @param departamentoValidador cliente hacia departamentos-service,
+     *                               con retry + Circuit Breaker
      */
-    public EmpleadoService(EmpleadoRepository empleadoRepository, DepartamentoClient departamentoClient) {
+    public EmpleadoService(EmpleadoRepository empleadoRepository, DepartamentoValidador departamentoValidador) {
         this.empleadoRepository = empleadoRepository;
-        this.departamentoClient = departamentoClient;
+        this.departamentoValidador = departamentoValidador;
     }
 
     /**
@@ -64,14 +65,16 @@ public class EmpleadoService {
 
         /*
          * Verificamos que el departamento exista, consultando a
-         * departamentos-service. Tres resultados posibles:
+         * departamentos-service a través del Circuit Breaker. Tres
+         * resultados posibles:
          * - EXISTE: se confirma, el empleado se marca como validado.
          * - NO_EXISTE: respuesta definitiva (404 real) -> se rechaza con 400.
-         * - INDETERMINADO: departamentos-service no respondió tras agotar
-         *   los reintentos -> se acepta el empleado, pendiente de validación.
+         * - INDETERMINADO: no se pudo determinar (reintentos agotados,
+         *   o el circuito ya está abierto) -> se acepta el empleado,
+         *   pendiente de validación.
          */
         DepartamentoValidacionResultado resultado =
-                departamentoClient.consultarExistencia(empleado.getDepartamentoId());
+                departamentoValidador.consultarExistencia(empleado.getDepartamentoId());
 
         switch (resultado) {
             case NO_EXISTE -> throw new IllegalArgumentException(

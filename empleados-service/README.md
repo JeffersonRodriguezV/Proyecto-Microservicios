@@ -249,4 +249,35 @@ confirmado en el momento del registro. Queda como trabajo futuro (fuera
 del alcance del Reto 2) un proceso que revise periódicamente los
 empleados con `departamentoValidado: false` y reintente la validación.
 
-### Variable de entorno
+## Reto 3 — Circuit Breaker
+Se agregó Resilience4j envolviendo la llamada existente a
+`departamentos-service` (timeout + retry del Reto 2 siguen intactos).
+
+### Diseño: dos clases separadas, no una
+`DepartamentoClient` (retry) y `DepartamentoValidador` (Circuit Breaker)
+están en clases distintas a propósito: `@Retryable` y `@CircuitBreaker`
+son proxies de Spring AOP, y una llamada interna entre métodos de la
+MISMA clase no pasa por el proxy (auto-invocación) — el Circuit Breaker
+simplemente no se activaría. Al separar en dos beans, la llamada entre
+ellos sí atraviesa el proxy correctamente.
+### Parámetros elegidos
+
+| Parámetro | Valor | Por qué |
+|---|---|---|
+| Ventana deslizante | 10 llamadas | Sugerido por el reto |
+| Mínimo de llamadas para evaluar | 3 | Umbral bajo del rango sugerido (3-5) |
+| Umbral de fallos | 50% | Sugerido por el reto |
+| Espera en OPEN | 30s | Mínimo del rango sugerido (30-60s) |
+| Llamadas de prueba en HALF_OPEN | 1 | Mínimo necesario para probar recuperación |
+
+### Estrategia de fallback
+
+Se reutiliza la misma decisión de negocio del Reto 2: ante circuito
+abierto o reintentos agotados, el empleado se registra igual, marcado
+como pendiente de validación (`departamentoValidado: false`).
+
+### Endpoint de observabilidad
+
+```
+GET http://localhost:8080/actuator/circuitbreakers
+```
