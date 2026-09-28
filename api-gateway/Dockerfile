@@ -11,7 +11,7 @@ WORKDIR /app
 # Se copia primero package.json para aprovechar la cache de capas
 # de Docker: si solo cambia el código y no las dependencias, esta
 # capa no se reconstruye.
-COPY package.json package-lock.json ./
+COPY package*.json ./
 RUN npm install --omit=dev
 
 COPY src ./src

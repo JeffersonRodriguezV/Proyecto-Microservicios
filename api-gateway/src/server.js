@@ -11,10 +11,10 @@ const express = require('express');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
-const EMPLEADOS_URL = process.env.EMPLEADOS_URL || 'http://localhost:8080';
-const DEPARTAMENTOS_URL = process.env.DEPARTAMENTOS_URL || 'http://localhost:8081';
+const EMPLEADOS_URL = process.env.EMPLEADOS_URL || 'http://localhost:8081';
+const DEPARTAMENTOS_URL = process.env.DEPARTAMENTOS_URL || 'http://localhost:8082';
 
 /**
  * Crea un proxy hacia `target`, reenviando bajo el mismo `prefix`
