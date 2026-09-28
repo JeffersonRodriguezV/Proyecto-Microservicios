@@ -1,40 +1,189 @@
 services:
-  api-gateway:
-    build: ./api-gateway
-    container_name: api-gateway
-    ports:
-      - "8080:8080"          # ÚNICO puerto publicado al host
+
+  # =========================================================
+  # BASE DE DATOS - EMPLEADOS
+  # =========================================================
+  database-empleados:
+    image: mysql:8.0
+    container_name: database-empleados
+
     environment:
-      - EMPLEADOS_URL=http://empleados-service:8081
-      - DEPARTAMENTOS_URL=http://departamentos-service:8082
+      MYSQL_DATABASE: ${DB_EMPLEADOS_NAME:-empleados_db}       # nombre de la BD
+      MYSQL_USER: ${DB_EMPLEADOS_USER:-empleados_user}         # usuario de la app
+      MYSQL_PASSWORD: ${DB_EMPLEADOS_PASSWORD:-empleados_pass} # password de ese usuario
+      MYSQL_ROOT_PASSWORD: ${DB_EMPLEADOS_ROOT_PASSWORD:-root_empleados_pass} # solo para el healthcheck
+
+    volumes:
+      - vol-empleados:/var/lib/mysql                            # persistencia real de los datos
+      - ./empleados-service/database:/docker-entrypoint-initdb.d:ro # crea el esquema al primer arranque
+
+    healthcheck:
+      # 127.0.0.1 fuerza TCP: el server temporal de init solo escucha por socket
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h 127.0.0.1 -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent"
+        ]
+      interval: 5s      # cada cuánto revisa
+      timeout: 5s       # cuánto espera cada intento
+      retries: 12       # cuántos fallos tolera antes de marcar unhealthy
+      start_period: 30s # margen inicial sin contar fallos (MySQL tarda en iniciar)
+
     networks:
       - microservices-network
+
+  # =========================================================
+  # BASE DE DATOS - DEPARTAMENTOS
+  # =========================================================
+  database-departamentos:
+    image: postgres:16-alpine
+    container_name: database-departamentos
+
+    environment:
+      POSTGRES_DB: ${DB_DEPARTAMENTOS_NAME:-departamentos_db}
+      POSTGRES_USER: ${DB_DEPARTAMENTOS_USER:-departamentos_user}
+      POSTGRES_PASSWORD: ${DB_DEPARTAMENTOS_PASSWORD:-departamentos_pass}
+
+    volumes:
+      - vol-departamentos:/var/lib/postgresql/data               # persistencia real
+      - ./departamentos-service/database:/docker-entrypoint-initdb.d:ro # crea la tabla al primer arranque
+
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8080/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"] # $$ se expande dentro del contenedor
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+    networks:
+      - microservices-network
+
+
+  # =========================================================
+  # SERVICIO DE DEPARTAMENTOS
+  # =========================================================
+  departamentos-service:
+    build:
+      context: ./departamentos-service
+
+    container_name: departamentos-service
+    restart: unless-stopped
+
+    expose:
+      - "8081"    # Reto 3: solo visible dentro de la red, ya no al host
+
+    environment:
+      DB_URL: postgresql://database-departamentos:5432/${DB_DEPARTAMENTOS_NAME:-departamentos_db}
+      DB_USERNAME: ${DB_DEPARTAMENTOS_USER:-departamentos_user}
+      DB_PASSWORD: ${DB_DEPARTAMENTOS_PASSWORD:-departamentos_pass}
+
+    depends_on:
+      database-departamentos:
+        condition: service_healthy   # espera a que Postgres esté LISTO, no solo arrancado
+
+    healthcheck:
+      # golpea su propio endpoint /departamentos; si responde, está sano
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8081/departamentos', timeout=3)"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+    networks:
+      - microservices-network
+
+
+  # =========================================================
+  # SERVICIO DE EMPLEADOS
+  # =========================================================
+  empleados-service:
+    build:
+      context: ./empleados-service
+
+    container_name: empleados-service
+    restart: unless-stopped
+
+    expose:
+      - "8080"    # Reto 3: solo visible dentro de la red, ya no al host
+
+    environment:
+      DB_URL: jdbc:mysql://database-empleados:3306/${DB_EMPLEADOS_NAME:-empleados_db}?allowPublicKeyRetrieval=true&useSSL=false
+      DB_USERNAME: ${DB_EMPLEADOS_USER:-empleados_user}
+      DB_PASSWORD: ${DB_EMPLEADOS_PASSWORD:-empleados_pass}
+      DEPARTAMENTOS_SERVICE_URL: http://departamentos-service:8081  # hostname interno, no localhost
+
+    depends_on:
+      database-empleados:
+        condition: service_healthy   # espera a que MySQL esté LISTO
+      departamentos-service:
+        condition: service_started   # solo espera que arranque (el timeout/retry del código cubre el resto)
+
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/empleados || exit 1"] # golpea su propio endpoint
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+    networks:
+      - microservices-network
+
+
+  # =========================================================
+  # API GATEWAY (Reto 3)
+  # =========================================================
+  api-gateway:
+    build:
+      context: ./api-gateway
+
+    container_name: api-gateway
+    restart: unless-stopped
+
+    ports:
+      - "8080:3000"   # ÚNICO puerto publicado al host de todo el sistema
+
+    environment:
+      EMPLEADOS_URL: http://empleados-service:8080       # hostname:puerto interno real
+      DEPARTAMENTOS_URL: http://departamentos-service:8081 # hostname:puerto interno real
+
+    depends_on:
+      - empleados-service       # solo arranque; el propio Gateway maneja 503 si aún no responden
+      - departamentos-service
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:3000/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
+        ]
       interval: 10s
       timeout: 5s
       retries: 3
       start_period: 15s
-    depends_on:
-      - empleados-service
-      - departamentos-service
 
-  empleados-service:
-    build: ./empleados-service
-    container_name: empleados-service
-    expose:
-      - "8081"               # Solo visible dentro de la red Docker
     networks:
       - microservices-network
 
-  departamentos-service:
-    build: ./departamentos-service
-    container_name: departamentos-service
-    expose:
-      - "8082"               # Solo visible dentro de la red Docker
-    networks:
-      - microservices-network
 
+# =========================================================
+# RED INTERNA
+# =========================================================
 networks:
   microservices-network:
     driver: bridge
+
+
+# =========================================================
+# VOLÚMENES PERSISTENTES
+# =========================================================
+volumes:
+  vol-empleados:
+  vol-departamentos:
