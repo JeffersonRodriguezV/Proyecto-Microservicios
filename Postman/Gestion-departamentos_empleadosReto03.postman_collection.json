@@ -6,6 +6,42 @@
   },
   "item": [
     {
+      "name": "Gateway - health check",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code es 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('El Gateway reporta estado activo', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.servicio).to.eql('api-gateway');",
+              "    pm.expect(jsonData.estado).to.eql('activo');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/health",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["health"]
+        }
+      },
+      "response": []
+    },
+
+
+    {
       "name": "Registrar un departamento",
       "event": [
         {
@@ -39,10 +75,10 @@
           }
         },
         "url": {
-          "raw": "http://localhost:8081/departamentos",
+          "raw": "http://localhost:8080/departamentos",
           "protocol": "http",
           "host": ["localhost"],
-          "port": "8081",
+          "port": "8080",
           "path": ["departamentos"]
         }
       },
@@ -72,10 +108,10 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "http://localhost:8081/departamentos/IT",
+          "raw": "http://localhost:8080/departamentos/IT",
           "protocol": "http",
           "host": ["localhost"],
-          "port": "8081",
+          "port": "8080",
           "path": ["departamentos", "IT"]
         }
       },
@@ -107,10 +143,10 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "http://localhost:8081/departamentos/NO-EXISTE",
+          "raw": "http://localhost:8080/departamentos/NO-EXISTE",
           "protocol": "http",
           "host": ["localhost"],
-          "port": "8081",
+          "port": "8080",
           "path": ["departamentos", "NO-EXISTE"]
         }
       },
