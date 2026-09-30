@@ -4,6 +4,8 @@ import com.microservicios.gestionempleados.model.Empleado;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface EmpleadoRepository extends JpaRepository <Empleado, Integer >{
     /**
@@ -19,4 +21,13 @@ public interface EmpleadoRepository extends JpaRepository <Empleado, Integer >{
      * @return true si ya existe un empleado con ese numero.
      */
     boolean existsByNumeroEmpleado(String numeroEmplado);
+
+    /**
+     * Empleados cuyo departamento quedó sin confirmar (INDETERMINADO en
+     * su momento). Se usa al arrancar el servicio para reintentar la
+     * validación.
+     * @return lista de empleados pendientes de validación
+     */
+    List<Empleado> findByDepartamentoValidadoFalse();
+
 }

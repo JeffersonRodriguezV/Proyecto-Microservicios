@@ -5,6 +5,9 @@ import com.microservicios.gestionempleados.model.enume.EstadoEmpleado;
 import com.microservicios.gestionempleados.repository.EmpleadoRepository;
 import com.microservicios.gestionempleados.client.DepartamentoValidador;
 import com.microservicios.gestionempleados.client.DepartamentoValidacionResultado;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -118,5 +121,26 @@ public class EmpleadoService {
     public List<Empleado> listarEmpleados() {
         return empleadoRepository.findAll();
     }
+
+    /**
+     * Reintenta la validación de los departamentos de los empleados
+     * que quedaron pendientes (departamentoValidado = false).
+     * <p>
+     * Se ejecuta automáticamente al iniciar el servicio y cada 5 minutos.
+     */
+    public void reconciliarDepartamentosPendientes() {
+        List<Empleado> pendientes = empleadoRepository.findByDepartamentoValidadoFalse();
+
+        for (Empleado empleado : pendientes) {
+            DepartamentoValidacionResultado resultado =
+                    departamentoValidador.consultarExistencia(empleado.getDepartamentoId());
+
+            if (resultado == DepartamentoValidacionResultado.EXISTE) {
+                empleado.setDepartamentoValidado(true);
+                empleadoRepository.save(empleado);
+            }
+        }
+    }
+
 
 }
