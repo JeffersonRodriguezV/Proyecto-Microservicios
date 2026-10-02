@@ -13,6 +13,8 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.format.annotation.DateTimeFormat;
+import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/empleados")
@@ -47,6 +49,34 @@ public class EmpleadoController {
         }
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<?> actualizarEmpleado(@PathVariable int id, @Valid @RequestBody Empleado empleado) {
+        try {
+            Empleado actualizado = empleadoService.actualizarEmpleado(id, empleado);
+            return ResponseEntity.ok(actualizado);
+        } catch (IllegalArgumentException exception) {
+            HttpStatus status = exception.getMessage().contains("no existe")
+                    ? HttpStatus.NOT_FOUND
+                    : HttpStatus.BAD_REQUEST;
+            ErrorResponse error = new ErrorResponse(status.value(), exception.getMessage());
+            return ResponseEntity.status(status).body(error);
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> retirarEmpleado(
+            @PathVariable int id,
+            @RequestParam(required = false, defaultValue = "RENUNCIA") String motivo
+    ) {
+        try {
+            Empleado retirado = empleadoService.retirarEmpleado(id, motivo);
+            return ResponseEntity.ok(retirado);
+        } catch (IllegalArgumentException exception) {
+            ErrorResponse error = new ErrorResponse(HttpStatus.NOT_FOUND.value(), exception.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+        }
+    }
+
     @Operation(summary = "Consultar un empleado por id")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Empleado encontrado",
@@ -71,7 +101,14 @@ public class EmpleadoController {
     @Operation(summary = "Listar todos los empleados registrados")
     @ApiResponse(responseCode = "200", description = "Lista de empleados (puede estar vacía)")
     @GetMapping
-    public ResponseEntity<?> listarEmpleados() {
+    public ResponseEntity<?> listarEmpleados(
+            @RequestParam(required = false) String estado,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta
+    ) {
+        if (estado != null) {
+            return ResponseEntity.ok(empleadoService.listarPorEstado(estado, desde, hasta));
+        }
         return ResponseEntity.ok(empleadoService.listarEmpleados());
     }
 }

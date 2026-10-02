@@ -3,6 +3,8 @@ package com.microservicios.gestionempleados.repository;
 import com.microservicios.gestionempleados.model.Empleado;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+import com.microservicios.gestionempleados.model.enume.EstadoEmpleado;
+import java.time.LocalDateTime;
 
 import java.util.List;
 
@@ -29,5 +31,10 @@ public interface EmpleadoRepository extends JpaRepository <Empleado, Integer >{
      * @return lista de empleados pendientes de validación
      */
     List<Empleado> findByDepartamentoValidadoFalse();
+
+    List<Empleado> findByEstado(EstadoEmpleado estado);
+
+    List<Empleado> findByEstadoAndFechaRetiroBetween(
+            EstadoEmpleado estado, LocalDateTime desde, LocalDateTime hasta);
 
 }

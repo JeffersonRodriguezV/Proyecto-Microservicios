@@ -117,6 +117,7 @@ services:
       DB_USERNAME: ${DB_EMPLEADOS_USER:-empleados_user}
       DB_PASSWORD: ${DB_EMPLEADOS_PASSWORD:-empleados_pass}
       DEPARTAMENTOS_SERVICE_URL: http://departamentos-service:8081  # hostname interno, no localhost
+      RABBITMQ_HOST: rabbitmq-test #PROVISIONAL MIENTRAS PERSONA 3 INTEGRA EL BROKER REAL AL COMPOSE
 
     depends_on:
       database-empleados:

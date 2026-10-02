@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import java.time.LocalDateTime;
 
 import java.time.LocalDate;
 
@@ -57,6 +58,9 @@ public class Empleado {
 
     @Column(name = "departamento_validado", nullable = false)
     private Boolean departamentoValidado = true;
+
+    @Column(name = "fecha_retiro")
+    private LocalDateTime fechaRetiro;
 
     /**
      * Constructor completo.
@@ -178,5 +182,13 @@ public class Empleado {
 
     public void setDepartamentoValidado(Boolean departamentoValidado) {
         this.departamentoValidado = departamentoValidado;
+    }
+
+    public LocalDateTime getFechaRetiro() {
+        return fechaRetiro;
+    }
+
+    public void setFechaRetiro(LocalDateTime fechaRetiro) {
+        this.fechaRetiro = fechaRetiro;
     }
 }

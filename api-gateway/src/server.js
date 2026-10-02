@@ -26,7 +26,11 @@ function crearProxy(target, prefix) {
     return createProxyMiddleware({
         target,
         changeOrigin: true,
-        pathRewrite: (path) => `${prefix}${path === '/' ? '' : path}`,
+        pathRewrite: (path) => {
+            if (path === '/') return prefix;
+            if (path.startsWith('/?')) return prefix + path.substring(1);
+            return prefix + path;
+        },
         on: {
             error: (err, req, res) => {
                 res.writeHead(503, { 'Content-Type': 'application/json' });

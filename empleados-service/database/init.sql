@@ -21,6 +21,8 @@ CREATE TABLE IF NOT EXISTS empleados (
 
     departamento_validado BOOLEAN NOT NULL DEFAULT TRUE,
 
+    fecha_retiro DATETIME NULL,
+
     fecha_ingreso DATE NOT NULL,
 
     estado VARCHAR(30) NOT NULL DEFAULT 'ACTIVO',
