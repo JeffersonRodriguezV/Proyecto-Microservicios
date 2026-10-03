@@ -1,0 +1,1 @@
+public record PerfilActualizacion(string? Telefono, string? Direccion, string? Ciudad, string? Biografia);
