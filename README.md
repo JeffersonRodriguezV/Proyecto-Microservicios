@@ -237,3 +237,31 @@ Colección con pruebas automáticas (`pm.test`):
 - [`api-gateway/README.md`](./api-gateway/README.md)
 - [`empleados-service/README.md`](./empleados-service/README.md)
 - [`departamentos-service/README.md`](./departamentos-service/README.md)
+
+## Vacaciones-service RETO 04
+## Decisión técnica: validación de existencia del empleado
+
+Se evaluaron dos estrategias para la validación "el empleado debe existir":
+
+**Opción (a) — Consulta síncrona REST** *(la elegida)*: `vacaciones-service`
+llama a `GET /empleados/{id}` en `empleados-service` en el momento de
+programar el período, con un timeout explícito de 5 segundos.
+
+**Opción (b) — Réplica local por eventos**: `vacaciones-service` consumiría
+`empleado.creado` y `empleado.retirado` para mantener su propia tabla
+mínima de empleados válidos, sin depender de una llamada en vivo.
+
+**Se eligió la opción (a)** por dos razones:
+
+1. `empleados-service` ya expone `GET /empleados/{id}` desde el Reto 2 —
+   cero infraestructura nueva, menor superficie de error.
+2. Vacaciones depende por naturaleza del dominio, de que el empleado
+   exista en el sistema central. Si `empleados-service` está caído el
+   tiempo suficiente como para no poder confirmar un empleado, es
+   razonable que tampoco se puedan programar vacaciones para él.
+
+**Costo asumido:** con esta estrategia, `vacaciones-service` queda
+dependiente a la disponibilidad de `empleados-service` — si está caído,
+la validación 4 tampoco puede resolverse. Se mitiga parcialmente con
+un timeout explícito (5s) para no dejar la petición del cliente
+colgada indefinidamente.
