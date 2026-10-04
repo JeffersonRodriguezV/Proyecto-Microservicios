@@ -1,190 +1,328 @@
 services:
 
-  # =========================================================
-  # BASE DE DATOS - EMPLEADOS
-  # =========================================================
-  database-empleados:
-    image: mysql:8.0
-    container_name: database-empleados
+  # ==========================================================================
+  # API GATEWAY (Node.js/Express) - Punto de entrada único al sistema
+  # ==========================================================================
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    ports:
+      - "8080:8080"                     # ÚNICO puerto publicado al host
+    environment:
+      PORT: 8080
+      EMPLEADOS_URL: http://empleados-service:8080
+      DEPARTAMENTOS_URL: http://departamentos-service:8081
+      PERFILES_URL: http://perfiles-service:8083
+      NOTIFICACIONES_URL: http://notificaciones-service:8084
+      VACACIONES_URL: http://vacaciones-service:8085
+    depends_on:
+      - empleados-service
+      - departamentos-service
+      - perfiles-service
+      - notificaciones-service
+      - vacaciones-service
+    networks:
+      - microservices-network
+    restart: unless-stopped
 
+  # ==========================================================================
+  # MESSAGE BROKER (RabbitMQ) - Infraestructura de mensajería asincrónica
+  # ==========================================================================
+  message-broker:
+    image: rabbitmq:3-management        # Incluye la Management UI en :15672
+    container_name: message-broker
+    ports:
+      - "15672:15672"                   # UI web de administración
+    environment:
+      RABBITMQ_DEFAULT_USER: admin      # Usuario por defecto
+      RABBITMQ_DEFAULT_PASS: admin      # Contraseña por defecto
+    volumes:
+      # Persiste colas, exchanges y mensajes no consumidos
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      # Verifica que el broker esté LISTO para aceptar conexiones,
+      # no solo que el proceso esté vivo.
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "check_port_connectivity" ]
+      interval: 15s                     # Verifica cada 10 segundos
+      timeout: 10s                       # Timeout por intento
+      retries: 12                        # 12 fallos consecutivos = unhealthy
+      start_period: 60s                 # Tiempo de gracia al inicio
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # ==========================================================================
+  # EMPLEADOS-SERVICE
+  # ==========================================================================
+  empleados-service:
+    build:
+      context: ./empleados-service      # Carpeta con el código fuente
+      dockerfile: Dockerfile            # Dockerfile del servicio
+    container_name: empleados-service
+    expose:
+      - "8080"                          # Solo accesible dentro de la red Docker
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://db-empleados:3306/empleados_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: empleados_user
+      SPRING_DATASOURCE_PASSWORD: empleados_pass
+      # --- Conexión al broker para PUBLICAR eventos ---
+      RABBITMQ_HOST: message-broker
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: admin
+      RABBITMQ_PASS: admin
+    depends_on:
+      db-empleados:
+        condition: service_healthy      # Espera a que la BD esté lista
+      message-broker:
+        condition: service_healthy      # Espera a que el broker esté listo
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # ==========================================================================
+  # DEPARTAMENTOS-SERVICE
+  # ==========================================================================
+  departamentos-service:
+    build:
+      context: ./departamentos-service
+      dockerfile: Dockerfile
+    container_name: departamentos-service
+    expose:
+      - "8081"                          # Solo accesible dentro de la red Docker
+    environment:
+      # --- Conexión a su base de datos PostgreSQL ---
+      DB_URL: postgresql://db-departamentos:5432/departamentos
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+    depends_on:
+      db-departamentos:
+        condition: service_healthy      # Espera a que la BD esté lista
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # ==========================================================================
+  # PERFILES - SERVICE
+  # ==========================================================================
+
+  perfiles-service:
+    build:
+      context: ./perfiles-service
+      dockerfile: Dockerfile
+    container_name: perfiles-service
+    expose:
+      - "8083"                          # Detrás del Gateway, sin puerto al host
+    environment:
+      # --- Conexión a su base de datos PostgreSQL ---
+      DATABASE_URL: postgresql://postgres:postgres@db-perfiles:5432/perfiles
+      # --- Conexión al broker para CONSUMIR eventos ---
+      RABBITMQ_HOST: message-broker
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: admin
+      RABBITMQ_PASS: admin
+    depends_on:
+      db-perfiles:
+        condition: service_healthy      # Espera a que la BD esté lista
+      message-broker:
+        condition: service_healthy      # Espera a que el broker esté listo
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # ==========================================================================
+  # NOTIFICACIONES - SERVICE
+  # ==========================================================================
+  notificaciones-service:
+    build:
+      context: ./notificaciones-service
+      dockerfile: Dockerfile
+    container_name: notificaciones-service
+    expose:
+      - "8084"                          # Detrás del Gateway, sin puerto al host
+    environment:
+      # --- Conexión a su base de datos PostgreSQL ---
+      DATABASE_URL: postgresql://postgres:postgres@db-notificaciones:5432/notificaciones
+      # --- Conexión al broker para CONSUMIR eventos ---
+      RABBITMQ_HOST: message-broker
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: admin
+      RABBITMQ_PASS: admin
+    depends_on:
+      db-notificaciones:
+        condition: service_healthy      # Espera a que la BD esté lista
+      message-broker:
+        condition: service_healthy      # Espera a que el broker esté listo
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # ==========================================================================
+  # VACACIONES - SERVICE
+  # ==========================================================================
+
+  vacaciones-service:
+    build:
+      context: ./vacaciones-service
+      dockerfile: Dockerfile
+    container_name: vacaciones-service
+    expose:
+      - "8085"                          # Detrás del Gateway, sin puerto al host
+    environment:
+      # --- Conexión a su base de datos PostgreSQL ---
+      DATABASE_URL: postgresql://postgres:postgres@db-vacaciones:5432/vacaciones
+      # --- Conexión al broker para PUBLICAR eventos ---
+      RABBITMQ_HOST: message-broker
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: admin
+      RABBITMQ_PASS: admin
+      # --- URL del servicio de empleados ---
+      EMPLEADOS_SERVICE_URL: http://empleados-service:8080
+    depends_on:
+      db-vacaciones:
+        condition: service_healthy      # Espera a que la BD esté lista
+      message-broker:
+        condition: service_healthy      # Espera a que el broker esté listo
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # ==========================================================================
+  # BASE DE DATOS: EMPLEADOS
+  # ==========================================================================
+  db-empleados:
+    image: mysql:8.0
+    container_name: db-empleados
     environment:
       MYSQL_DATABASE: ${DB_EMPLEADOS_NAME:-empleados_db}       # nombre de la BD
       MYSQL_USER: ${DB_EMPLEADOS_USER:-empleados_user}         # usuario de la app
       MYSQL_PASSWORD: ${DB_EMPLEADOS_PASSWORD:-empleados_pass} # password de ese usuario
       MYSQL_ROOT_PASSWORD: ${DB_EMPLEADOS_ROOT_PASSWORD:-root_empleados_pass} # solo para el healthcheck
-
     volumes:
-      - vol-empleados:/var/lib/mysql                            # persistencia real de los datos
+      - db-empleados-data:/var/lib/mysql                            # persistencia real de los datos
       - ./empleados-service/database:/docker-entrypoint-initdb.d:ro # crea el esquema al primer arranque
-
     healthcheck:
-      # 127.0.0.1 fuerza TCP: el server temporal de init solo escucha por socket
+      # Verifica que  acepte conexiones antes de marcar "healthy"
       test:
         [
           "CMD-SHELL",
           "mysqladmin ping -h 127.0.0.1 -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent"
         ]
-      interval: 5s      # cada cuánto revisa
-      timeout: 5s       # cuánto espera cada intento
-      retries: 12       # cuántos fallos tolera antes de marcar unhealthy
-      start_period: 30s # margen inicial sin contar fallos (MySQL tarda en iniciar)
-
-    networks:
-      - microservices-network
-
-  # =========================================================
-  # BASE DE DATOS - DEPARTAMENTOS
-  # =========================================================
-  database-departamentos:
-    image: postgres:16-alpine
-    container_name: database-departamentos
-
-    environment:
-      POSTGRES_DB: ${DB_DEPARTAMENTOS_NAME:-departamentos_db}
-      POSTGRES_USER: ${DB_DEPARTAMENTOS_USER:-departamentos_user}
-      POSTGRES_PASSWORD: ${DB_DEPARTAMENTOS_PASSWORD:-departamentos_pass}
-
-    volumes:
-      - vol-departamentos:/var/lib/postgresql/data               # persistencia real
-      - ./departamentos-service/database:/docker-entrypoint-initdb.d:ro # crea la tabla al primer arranque
-
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"] # $$ se expande dentro del contenedor
-      interval: 5s
-      timeout: 3s
-      retries: 10
-      start_period: 10s
-
-    networks:
-      - microservices-network
-
-
-  # =========================================================
-  # SERVICIO DE DEPARTAMENTOS
-  # =========================================================
-  departamentos-service:
-    build:
-      context: ./departamentos-service
-
-    container_name: departamentos-service
-    restart: unless-stopped
-
-    expose:
-      - "8081"    # Reto 3: solo visible dentro de la red, ya no al host
-
-    environment:
-      DB_URL: postgresql://database-departamentos:5432/${DB_DEPARTAMENTOS_NAME:-departamentos_db}
-      DB_USERNAME: ${DB_DEPARTAMENTOS_USER:-departamentos_user}
-      DB_PASSWORD: ${DB_DEPARTAMENTOS_PASSWORD:-departamentos_pass}
-
-    depends_on:
-      database-departamentos:
-        condition: service_healthy   # espera a que Postgres esté LISTO, no solo arrancado
-
-    healthcheck:
-      # golpea su propio endpoint /departamentos; si responde, está sano
-      test:
-        [
-          "CMD",
-          "python",
-          "-c",
-          "import urllib.request; urllib.request.urlopen('http://localhost:8081/departamentos', timeout=3)"
-        ]
       interval: 10s
       timeout: 5s
-      retries: 10
-      start_period: 20s
-
-    networks:
-      - microservices-network
-
-
-  # =========================================================
-  # SERVICIO DE EMPLEADOS
-  # =========================================================
-  empleados-service:
-    build:
-      context: ./empleados-service
-
-    container_name: empleados-service
-    restart: unless-stopped
-
-    expose:
-      - "8080"    # Reto 3: solo visible dentro de la red, ya no al host
-
-    environment:
-      DB_URL: jdbc:mysql://database-empleados:3306/${DB_EMPLEADOS_NAME:-empleados_db}?allowPublicKeyRetrieval=true&useSSL=false
-      DB_USERNAME: ${DB_EMPLEADOS_USER:-empleados_user}
-      DB_PASSWORD: ${DB_EMPLEADOS_PASSWORD:-empleados_pass}
-      DEPARTAMENTOS_SERVICE_URL: http://departamentos-service:8081  # hostname interno, no localhost
-      RABBITMQ_HOST: rabbitmq-test #PROVISIONAL MIENTRAS PERSONA 3 INTEGRA EL BROKER REAL AL COMPOSE
-
-    depends_on:
-      database-empleados:
-        condition: service_healthy   # espera a que MySQL esté LISTO
-      departamentos-service:
-        condition: service_started   # solo espera que arranque (el timeout/retry del código cubre el resto)
-
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/empleados || exit 1"] # golpea su propio endpoint
-      interval: 10s
-      timeout: 5s
-      retries: 10
+      retries: 5
       start_period: 30s
-
     networks:
       - microservices-network
-
-
-  # =========================================================
-  # API GATEWAY (Reto 3)
-  # =========================================================
-  api-gateway:
-    build:
-      context: ./api-gateway
-
-    container_name: api-gateway
     restart: unless-stopped
 
-    ports:
-      - "8080:3000"   # ÚNICO puerto publicado al host de todo el sistema
-
+  # ==========================================================================
+  # BASE DE DATOS: DEPARTAMENTOS
+  # ==========================================================================
+  db-departamentos:
+    image: postgres:16-alpine
+    container_name: db-departamentos
     environment:
-      EMPLEADOS_URL: http://empleados-service:8080       # hostname:puerto interno real
-      DEPARTAMENTOS_URL: http://departamentos-service:8081 # hostname:puerto interno real
-
-    depends_on:
-      - empleados-service       # solo arranque; el propio Gateway maneja 503 si aún no responden
-      - departamentos-service
-
+      POSTGRES_DB: departamentos
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - db-departamentos-data:/var/lib/postgresql/data
+      - ./departamentos-service/database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      test:
-        [
-          "CMD",
-          "node",
-          "-e",
-          "require('http').get('http://localhost:3000/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
-        ]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d departamentos"]
       interval: 10s
       timeout: 5s
-      retries: 3
-      start_period: 15s
-
+      retries: 5
+      start_period: 30s
     networks:
       - microservices-network
+    restart: unless-stopped
 
+  # ==========================================================================
+  # BASE DE DATOS: PERFILES
+  # ==========================================================================
+  db-perfiles:
+    image: postgres:16-alpine
+    container_name: db-perfiles
+    environment:
+      POSTGRES_DB: perfiles
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - db-perfiles-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d perfiles"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - microservices-network
+    restart: unless-stopped
 
-# =========================================================
-# RED INTERNA
-# =========================================================
+  # ==========================================================================
+  # BASE DE DATOS: NOTIFICACIONES
+  # ==========================================================================
+
+  db-notificaciones:
+    image: postgres:16-alpine
+    container_name: db-notificaciones
+    environment:
+      POSTGRES_DB: notificaciones
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - db-notificaciones-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d notificaciones"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # ==========================================================================
+  # BASE DE DATOS: VACACIONES
+  # ==========================================================================
+
+  db-vacaciones:
+    image: postgres:16-alpine
+    container_name: db-vacaciones
+    environment:
+      POSTGRES_DB: vacaciones
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - db-vacaciones-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d vacaciones"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+# ============================================================================
+# VOLÚMENES NOMBRADOS
+# ============================================================================
+
+volumes:
+  rabbitmq-data:                        # Datos de RabbitMQ
+  db-empleados-data:                    # Datos de empleados
+  db-departamentos-data:                # Datos de departamentos
+  db-perfiles-data:                     # Datos de perfiles
+  db-notificaciones-data:               # Datos de notificaciones
+  db-vacaciones-data:                   # Datos de vacaciones
+
+# ============================================================================
+# REDES
+# ============================================================================
 networks:
   microservices-network:
     driver: bridge
-
-
-# =========================================================
-# VOLÚMENES PERSISTENTES
-# =========================================================
-volumes:
-  vol-empleados:
-  vol-departamentos:

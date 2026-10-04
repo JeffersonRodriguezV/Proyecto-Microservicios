@@ -1,26 +1,33 @@
 /**
  * Punto de entrada del API Gateway.
  *
- * Enruta /empleados/* y /departamentos/* hacia sus microservicios,
- * y responde 503 con un cuerpo JSON descriptivo si el destino no
- * responde (en vez de dejar que se propague un error crudo de Node
- * o que el request se quede colgado indefinidamente).
+ * Enruta:
+ *   /empleados/*      -> empleados-service:8080
+ *   /departamentos/*  -> departamentos-service:8081
+ *   /perfiles/*       -> perfiles-service:8083
+ *   /notificaciones/* -> notificaciones-service:8084
+ *   /vacaciones/*     -> vacaciones-service:8085
+ *
+ * Si un destino no responde, devuelve 503 con un JSON descriptivo.
  */
 
 const express = require('express');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
-const EMPLEADOS_URL = process.env.EMPLEADOS_URL || 'http://localhost:8080';
-const DEPARTAMENTOS_URL = process.env.DEPARTAMENTOS_URL || 'http://localhost:8081';
+// URLs leídas desde variables de entorno (definidas en docker-compose.yml)
+const EMPLEADOS_URL      = process.env.EMPLEADOS_URL      || 'http://localhost:8080';
+const DEPARTAMENTOS_URL  = process.env.DEPARTAMENTOS_URL  || 'http://localhost:8081';
+const PERFILES_URL       = process.env.PERFILES_URL       || 'http://localhost:8083';
+const NOTIFICACIONES_URL = process.env.NOTIFICACIONES_URL || 'http://localhost:8084';
+const VACACIONES_URL     = process.env.VACACIONES_URL     || 'http://localhost:8085';
 
 /**
  * Crea un proxy hacia `target`, reenviando bajo el mismo `prefix`
- * con el que se montó (ver nota sobre pathRewrite y barras finales
- * en el historial del Paso 2), y respondiendo 503 uniforme si el
- * destino no responde.
+ * con el que se montó, y devolviendo 503 uniforme si el destino
+ * no responde.
  */
 function crearProxy(target, prefix) {
     return createProxyMiddleware({
@@ -44,15 +51,22 @@ function crearProxy(target, prefix) {
     });
 }
 
+// Healthcheck del gateway
 app.get('/health', (req, res) => {
     res.status(200).json({ servicio: 'api-gateway', estado: 'activo' });
 });
 
-app.use('/empleados', crearProxy(EMPLEADOS_URL, '/empleados'));
+app.use('/empleados',     crearProxy(EMPLEADOS_URL,     '/empleados'));
 app.use('/departamentos', crearProxy(DEPARTAMENTOS_URL, '/departamentos'));
+app.use('/perfiles',       crearProxy(PERFILES_URL,       '/perfiles'));
+app.use('/notificaciones', crearProxy(NOTIFICACIONES_URL, '/notificaciones'));
+app.use('/vacaciones',     crearProxy(VACACIONES_URL,     '/vacaciones'));
 
 app.listen(PORT, () => {
     console.log(`API Gateway escuchando en el puerto ${PORT}`);
     console.log(`  /empleados/*      -> ${EMPLEADOS_URL}`);
     console.log(`  /departamentos/*  -> ${DEPARTAMENTOS_URL}`);
+    console.log(`  /perfiles/*       -> ${PERFILES_URL}`);
+    console.log(`  /notificaciones/* -> ${NOTIFICACIONES_URL}`);
+    console.log(`  /vacaciones/*     -> ${VACACIONES_URL}`);
 });
