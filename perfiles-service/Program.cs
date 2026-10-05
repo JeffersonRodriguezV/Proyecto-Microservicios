@@ -13,8 +13,13 @@ c.SwaggerDoc("v1", new Microsoft.OpenApi.OpenApiInfo
 
 var app = builder.Build();
 
-app.UseSwagger();
-app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Perfiles Service API v1"));
+app.UseSwagger(c => c.RouteTemplate = "perfiles/swagger/{documentName}/swagger.json");
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/perfiles/swagger/v1/swagger.json", "Perfiles Service API v1");
+    c.RoutePrefix = "perfiles/swagger";
+});
+
 
 Db.Inicializar();
 await RabbitMqConsumer.Iniciar();

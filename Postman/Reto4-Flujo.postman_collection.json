@@ -1,0 +1,450 @@
+{
+  "info": {
+    "_postman_id": "c4f1e8a2-reto4-flujo-completo",
+    "name": "Reto4-Flujo-Completo",
+    "description": "Pruebas del Reto 4 sobre el sistema integrado. Todo entra por el Gateway (http://localhost:8080). Cubre vacaciones (creacion + 4 validaciones) y el flujo asincronico: perfil creado por evento y notificaciones. Se puede repetir: genera departamento, email y fechas nuevos en cada corrida. Ejecutar con el Collection Runner, en orden.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "01 - Crear departamento",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/departamentos",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "departamentos"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": \"{{deptId}}\",\n  \"nombre\": \"Finanzas\",\n  \"descripcion\": \"Departamento de Finanzas\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Genera datos unicos para que la coleccion se pueda repetir sin chocar con duplicados",
+              "function fmt(d) { return d.toISOString().split('T')[0]; }",
+              "function enDias(n) { const d = new Date(); d.setUTCDate(d.getUTCDate() + n); return fmt(d); }",
+              "",
+              "const sufijo = Date.now().toString();",
+              "pm.collectionVariables.set('sufijo', sufijo);",
+              "pm.collectionVariables.set('deptId', 'D' + sufijo.slice(-6));",
+              "",
+              "// Fechas relativas a hoy: siempre son futuras, sin importar cuando se corra",
+              "pm.collectionVariables.set('fechaInicio', enDias(60));",
+              "pm.collectionVariables.set('fechaFin', enDias(74));",
+              "pm.collectionVariables.set('fechaSolapeInicio', enDias(69));",
+              "pm.collectionVariables.set('fechaSolapeFin', enDias(79));",
+              "pm.collectionVariables.set('fechaFuturaInicio', enDias(200));",
+              "pm.collectionVariables.set('fechaFuturaFin', enDias(205));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code es 201', function () {",
+              "    pm.response.to.have.status(201);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Crear empleado",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/empleados",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "empleados"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Marta\",\n  \"apellido\": \"Rojas\",\n  \"email\": \"marta.{{sufijo}}@empresa.com\",\n  \"numeroEmpleado\": \"EMP-R4-{{sufijo}}\",\n  \"cargo\": \"Analista Financiera\",\n  \"area\": \"Finanzas\",\n  \"departamentoId\": \"{{deptId}}\",\n  \"fechaIngreso\": \"2026-03-01\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code es 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.collectionVariables.set('empleadoIdVacaciones', String(pm.response.json().id));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Crear vacaciones (exitoso)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/vacaciones",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "vacaciones"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"empleadoId\": \"{{empleadoIdVacaciones}}\",\n  \"fechaInicio\": \"{{fechaInicio}}\",\n  \"fechaFin\": \"{{fechaFin}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code es 201', function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test('Estado PROGRAMADA', function () {",
+              "    pm.expect(pm.response.json().estado).to.eql('PROGRAMADA');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - Validacion: fechas incoherentes",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/vacaciones",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "vacaciones"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"empleadoId\": \"{{empleadoIdVacaciones}}\",\n  \"fechaInicio\": \"{{fechaFin}}\",\n  \"fechaFin\": \"{{fechaInicio}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code es 400', function () {",
+              "    pm.response.to.have.status(400);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - Validacion: fecha en el pasado",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/vacaciones",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "vacaciones"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"empleadoId\": \"{{empleadoIdVacaciones}}\",\n  \"fechaInicio\": \"2020-01-01\",\n  \"fechaFin\": \"2020-01-05\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code es 400', function () {",
+              "    pm.response.to.have.status(400);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 - Validacion: solapamiento",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/vacaciones",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "vacaciones"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"empleadoId\": \"{{empleadoIdVacaciones}}\",\n  \"fechaInicio\": \"{{fechaSolapeInicio}}\",\n  \"fechaFin\": \"{{fechaSolapeFin}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code es 400', function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test('Incluye el periodo en conflicto', function () {",
+              "    pm.expect(pm.response.json().periodoConflicto).to.exist;",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 - Validacion: empleado inexistente",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/vacaciones",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "vacaciones"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"empleadoId\": \"NO-EXISTE-999\",\n  \"fechaInicio\": \"{{fechaFuturaInicio}}\",\n  \"fechaFin\": \"{{fechaFuturaFin}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code es 400', function () {",
+              "    pm.response.to.have.status(400);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 - Perfil creado por evento (empleado.creado)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/perfiles/{{empleadoIdVacaciones}}",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "perfiles",
+            "{{empleadoIdVacaciones}}"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Pequena espera: el perfil se crea de forma asincrona al consumir el evento",
+              "setTimeout(function () {}, 1500);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code es 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('El perfil corresponde al empleado', function () {",
+              "    const p = pm.response.json();",
+              "    pm.expect(String(p.empleadoId)).to.eql(pm.collectionVariables.get('empleadoIdVacaciones'));",
+              "    pm.expect(p.nombre).to.eql('Marta');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 - Notificaciones del empleado (BIENVENIDA y VACACIONES)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/notificaciones/{{empleadoIdVacaciones}}",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "notificaciones",
+            "{{empleadoIdVacaciones}}"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code es 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Hay notificacion de BIENVENIDA y de VACACIONES', function () {",
+              "    const tipos = pm.response.json().map(function (n) { return n.tipo; });",
+              "    pm.expect(tipos).to.include('BIENVENIDA');",
+              "    pm.expect(tipos).to.include('VACACIONES');",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "empleadoIdVacaciones",
+      "value": ""
+    }
+  ]
+}

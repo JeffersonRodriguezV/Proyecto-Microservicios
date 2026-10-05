@@ -1,267 +1,199 @@
-# Sistema de Onboarding/Offboarding de Empleados — Reto 3
+# Sistema de Onboarding/Offboarding de Empleados — Reto 4
 
-Sistema basado en microservicios para la gestión de empleados y departamentos,
-desarrollado como parte de una serie de retos progresivos. Este documento
-cubre el sistema completo (los tres servicios + infraestructura); cada
-servicio tiene además su propio README con detalles específicos.
-
-## Tabla de servicios
-
-| Servicio | Lenguaje / Framework | Base de datos | Acceso |
-|---|---|---|---|
-| `api-gateway` | Node.js / Express | — | `http://localhost:8080` (único punto de entrada) |
-| `empleados-service` | Java 21 / Spring Boot | MySQL 8.0 | Solo interno (red de Docker) |
-| `departamentos-service` | Python / FastAPI | PostgreSQL 16 | Solo interno (red de Docker) |
+Sistema de microservicios para gestionar empleados, con comunicación REST
+síncrona y comunicación asincrónica por eventos a través de un message broker.
+Un solo evento (por ejemplo, crear un empleado) dispara acciones automáticas e
+independientes en otros servicios.
 
 ## Arquitectura
 
 ```
 Cliente HTTP (curl, Postman, navegador)
-        │
-        │  único punto de entrada
+        │   único punto de entrada: http://localhost:8080
         ▼
-   api-gateway  :8080 (host) -> :3000 (interno)
-        │
-        ├── /empleados/*      ──► empleados-service (interno :8080) ──► database-empleados (MySQL)
-        │                              │
-        │                              │ HTTP + timeout/retry + Circuit Breaker
-        │                              ▼
-        └── /departamentos/*  ──► departamentos-service (interno :8081) ──► database-departamentos (PostgreSQL)
+   api-gateway
+        ├── /empleados/*       ──► empleados-service        ──► MySQL
+        ├── /departamentos/*   ──► departamentos-service    ──► PostgreSQL
+        ├── /perfiles/*        ──► perfiles-service         ──► SQLite
+        ├── /notificaciones/*  ──► notificaciones-service   ──► SQLite
+        └── /vacaciones/*      ──► vacaciones-service       ──► SQLite
+
+   message-broker (RabbitMQ) — exchange "ecosistema.eventos"
+     empleados-service  ── publica ──► empleado.creado / actualizado / retirado
+     vacaciones-service ── publica ──► vacaciones.programadas
+     perfiles-service, notificaciones-service ◄── consumen
 ```
 
-Desde el Reto 3, **ningún microservicio es accesible directamente desde
-el host** — `empleados-service` y `departamentos-service` usan `expose:`
-en vez de `ports:` en el `docker-compose.yml`. Todo el tráfico externo
-pasa por `api-gateway`.
+Comunicación síncrona: `empleados-service` → `departamentos-service` (valida el
+departamento) y `vacaciones-service` → `empleados-service` (valida el empleado).
+Solo el Gateway (`8080`) y la interfaz del broker (`15672`) se publican al host;
+el resto usa `expose:` y solo es alcanzable dentro de la red de Docker.
 
-## Cómo levantar el sistema desde cero
+## Servicios y lenguajes
 
-Requisito: Docker Desktop instalado y corriendo.
+| Servicio | Lenguaje | Base de datos | Puerto interno | Rol |
+|---|---|---|---|---|
+| `api-gateway` | Node.js (Express) | — | 8080 (publicado) | Punto de entrada único |
+| `empleados-service` | Java 21 (Spring Boot) | MySQL 8 | 8080 | CRUD, baja lógica, publica `empleado.*` |
+| `departamentos-service` | Python (FastAPI) | PostgreSQL 16 | 8081 | CRUD de departamentos |
+| `perfiles-service` | C# (.NET) | SQLite | 8083 | Consume `empleado.*`; REST de perfiles |
+| `notificaciones-service` | Go | SQLite | 8084 | Consume eventos; historial de notificaciones |
+| `vacaciones-service` | JavaScript (Node.js) | SQLite | 8085 | CRUD de vacaciones; publica `vacaciones.programadas` |
+| `message-broker` | RabbitMQ 3 | — | 5672 (interno), 15672 (UI) | Mensajería asincrónica |
+
+## Despliegue
+
+Requisito: Docker Desktop corriendo.
 
 ```bash
 git clone https://github.com/JeffersonRodriguezV/Proyecto-Microservicios.git
 cd Proyecto-Microservicios
-cp .env.example .env        # opcional: el sistema funciona con valores por defecto si se omite
 docker compose up --build
 ```
 
-En otra terminal, verificar que los 5 contenedores queden `healthy`:
+En otra terminal, `docker compose ps` debe mostrar los **9 contenedores**
+`healthy`. URL base de todo el sistema: `http://localhost:8080`. Interfaz del
+broker: `http://localhost:15672` (usuario `admin`, contraseña `admin`).
 
-```bash
-docker compose ps
-```
+- Detener conservando los datos: `docker compose down`
+- Reiniciar desde cero (borra todos los datos): `docker compose down -v`
 
-Salida esperada:
+## Rutas del Gateway y documentación OpenAPI
 
-```
-NAME                     STATUS
-api-gateway              Up (healthy)
-database-departamentos   Up (healthy)
-database-empleados       Up (healthy)
-departamentos-service    Up (healthy)
-empleados-service        Up (healthy)
-```
+| Ruta externa | Servicio | Documentación Swagger |
+|---|---|---|
+| `/empleados`, `/empleados/{id}` | `empleados-service` | — |
+| `/departamentos`, `/departamentos/{id}` | `departamentos-service` | — |
+| `/perfiles`, `/perfiles/{empleadoId}` | `perfiles-service` | `http://localhost:8080/perfiles/swagger` |
+| `/notificaciones`, `/notificaciones/{empleadoId}` | `notificaciones-service` | `http://localhost:8080/notificaciones/docs` |
+| `/vacaciones`, `/vacaciones/{id}` | `vacaciones-service` | `http://localhost:8080/vacaciones/api-docs` |
+| `/health` | El propio Gateway | — |
 
-Para detener sin perder datos: `docker compose down`
-Para reiniciar completamente desde cero (borra TODO): `docker compose down -v`
+Cada servicio nuevo publica su documentación bajo su propio prefijo, así el
+Gateway la reenvía sin reglas adicionales. El Swagger de `empleados-service` y
+`departamentos-service` (Retos 2 y 3) no es accesible desde el host porque vive en
+la raíz de cada servicio, fuera de los prefijos que reenvía el Gateway.
 
-## URL base del sistema (Reto 3)
+## Eventos
 
- **Toda petición al sistema pasa por el Gateway**:
-```
-http://localhost:8080
-```
+Siguen el **Catálogo de Eventos** del ecosistema (nombres, envelope y cargas
+útiles sin cambios). Todos usan el envelope `{id, type, version, occurredAt,
+producer, data}` y se publican en el exchange `ecosistema.eventos` (tipo
+`topic`), con el nombre del evento como routing key. Cada consumidor tiene su
+propia cola durable.
 
-Las URLs directas a cada microservicio (`:8080` de empleados, `:8081` de
-departamentos) ya **no** son alcanzables desde fuera de Docker.
+| Evento | Productor | Consumidores | Efecto | Catálogo |
+|---|---|---|---|---|
+| `empleado.creado` | `empleados-service` | `perfiles-service`, `notificaciones-service` | Crea el perfil por defecto; registra notificación `BIENVENIDA` | §3.1 |
+| `empleado.actualizado` | `empleados-service` | `perfiles-service` | Sincroniza `nombre` y `email` en el perfil | §3.2 |
+| `empleado.retirado` | `empleados-service` | `perfiles-service`, `notificaciones-service` | Archiva el perfil (no se borra); registra `DESVINCULACION` | §3.3 |
+| `vacaciones.programadas` | `vacaciones-service` | `notificaciones-service` | Registra notificación `VACACIONES` | §3.8 |
 
-### Tabla de rutas (Gateway → servicio interno)
-
-| Ruta externa (a través del Gateway) | Servicio interno |
-|---|---|
-| `POST /empleados` | `empleados-service` |
-| `GET /empleados/{id}` | `empleados-service` |
-| `GET /empleados` | `empleados-service` |
-| `POST /departamentos` | `departamentos-service` |
-| `GET /departamentos/{id}` | `departamentos-service` |
-| `GET /departamentos` | `departamentos-service` |
-| `GET /health` | El propio Gateway |
+- Los eventos se publican **después** de persistir. Si la publicación falla, se
+  registra el error y la operación en base de datos **no** se revierte.
+- **Baja lógica:** `DELETE /empleados/{id}` no borra: cambia el estado a
+  `RETIRADO`, guarda `fechaRetiro` y publica `empleado.retirado`. El campo
+  `motivo` del evento se recibe como `?motivo=` (por defecto `RENUNCIA`).
+- **Auditoría:** `GET /empleados?estado=RETIRADO`, con filtro opcional
+  `&desde=AAAA-MM-DD&hasta=AAAA-MM-DD` sobre la fecha de retiro.
+- **Deduplicación:** cada consumidor registra el `id` de cada mensaje en una tabla
+  `eventos_procesados` y descarta los repetidos.
 
 ## Decisiones técnicas
 
-### 1. Motor de base de datos: distinto por servicio (MySQL / PostgreSQL)
+### Message broker: RabbitMQ
 
-Se aprovechó la independencia entre microservicios para usar motores
-distintos: MySQL para `empleados-service`, PostgreSQL para
-`departamentos-service`. **Se ganó**: independencia real de
-infraestructura entre servicios, evidencia concreta de persistencia
-políglota. **Su costO**: el equipo debe conocer dos motores
-de base de datos distintos en vez de uno solo y dos comandos de
-healthcheck diferentes (`mysqladmin ping` Y `pg_isready`).
 
-### 2. Creación del esquema: script `init.sql` en ambos servicios
-
-Se eligió sobre auto-DDL del ORM (rriesgoso en producción) y sobre
-herramientas de migración (más complejas).
-
-### 3. Garantía de unicidad: verificación previa + restricción en el esquema
-
-Se combinan ambas estrategias: verificación previa en el service (da
-un 400 legible) respaldada por una restricción real en el esquema
-(`UNIQUE` en email/numero_empleado; `PRIMARY KEY` en el id de
-departamento) — la única garantía real ante peticiones simultáneas.
-
-### 4. Gateway de aplicación: Node.js + Express (Reto 3)
-
-Se eligió un Gateway de **aplicación** (código propio) en vez de uno
-declarativo (Traefik/Nginx), porque retos futuros del curso requieren
-lógica propia en el Gateway (validación de JWT, composición de
-respuestas) que uno declarativo no puede hacer sin plugins.
-Node.js + Express suma un **tercer lenguaje** de programación al
-proyecto (junto a Java y Python), acercando al requisito del proyecto
-final de un mínimo de 4 lenguajes distintos. También se descartó Go por
-introducir dos fricciones simultáneas para el equipo (manejo de
-errores sin excepciones + documentación OpenAPI manual).
-
-## Circuit Breaker (Reto 3)
-
-`empleados-service` protege su llamada hacia `departamentos-service`
-con **Resilience4j**, envolviendo el timeout + retry que ya existía
-desde el Reto 2.
-
-### Parámetros elegidos
-
-| Parámetro | Valor | Por qué |
+| Broker | Decisión | Motivo |
 |---|---|---|
-| Ventana deslizante | 10 llamadas | Sugerido por el reto |
-| Mínimo de llamadas para evaluar | 3 | Umbral bajo del rango sugerido (3-5) |
-| Umbral de fallos | 50% | Sugerido por el reto |
-| Espera en estado OPEN | 30 segundos | Mínimo del rango sugerido (30-60s) |
-| Llamadas de prueba en HALF_OPEN | 1 | Mínimo necesario para probar recuperación |
+| **RabbitMQ** | Elegido | Colas durables y confirmación de mensajes, adecuado para eventos de negocio; interfaz de administración incluida; amplia documentación |
 
-### Estrategia de fallback
+### Validación del empleado en `vacaciones-service`
 
-Ante circuito abierto o reintentos agotados, el empleado se registra
-igual, marcado como pendiente de validación (`departamentoValidado: false`)
-— Esta misma decisión de negocio tomada en el Reto 2 ya que se prioriza
-disponibilidad sobre consistencia estricta. La reconciliación de estos
-registros pendientes queda como trabajo futuro, fuera del alcance de
-este reto.
+Había dos opciones para comprobar que el empleado existe: (a) consulta síncrona a
+`GET /empleados/{id}`, o (b) mantener una réplica local alimentada por
+`empleado.creado` y `empleado.retirado`. Se eligió **(a)**:
 
+1. `empleados-service` ya expone ese endpoint, así que no requiere infraestructura nueva.
+2. Vacaciones depende por naturaleza del dominio de que el empleado exista en el
+   sistema central: si Empleados está caído, tampoco tiene sentido programar vacaciones.
 
-## Evidencia de las 3 pruebas del Reto 3
+**Costo asumido:** queda acoplado a la disponibilidad de `empleados-service`. Se
+mitiga con un timeout explícito de 5 segundos. Se prioriza simplicidad y
+consistencia inmediata sobre autonomía.
 
-### Prueba 1 — Punto de entrada único
+### Base de datos de los servicios nuevos
 
-```bash
-# A través del Gateway: funciona
-curl http://localhost:8080/empleados
-curl http://localhost:8080/departamentos
+Cada servicio nuevo tiene su propia base **SQLite** en un volumen de Docker propio
+(`perfiles-data`, `notificaciones-data`, `vacaciones-data`), montado en `/data` y
+configurado con la variable `DB_PATH`. Es una base embebida, sin contenedor
+aparte, suficiente para el volumen de este sistema.
+### Resiliencia (Reto 3)
 
-# Acceso directo a un microservicio: DEBE FALLAR
-curl http://localhost:8081/departamentos  #FALLA
+La llamada de `empleados-service` a `departamentos-service` usa timeout, reintentos
+con espera creciente y Circuit Breaker (Resilience4j: ventana de 10 llamadas,
+mínimo 3, umbral de 50 %, 30 s en estado abierto). Si no se puede validar el
+departamento, el empleado se registra con `departamentoValidado: false`
+(disponibilidad sobre consistencia). Cuando el circuito vuelve a cerrarse,
+`empleados-service` revalida automáticamente esos registros pendientes.
+
+## Cómo probar el flujo asincrónico
+
+Todo por el Gateway (`http://localhost:8080`), con el sistema levantado:
+
+1. `POST /departamentos` — crear un departamento.
+2. `POST /empleados` — crear un empleado (usa ese `departamentoId`).
+3. `GET /perfiles/{empleadoId}` — el perfil ya existe: lo creó el evento.
+4. `GET /notificaciones/{empleadoId}` — aparece la notificación `BIENVENIDA`.
+5. `PUT /empleados/{id}` — cambiar el nombre; `GET /perfiles/{empleadoId}` lo refleja.
+6. `POST /vacaciones` — programar un período; `GET /notificaciones/{empleadoId}` muestra `VACACIONES`.
+7. Las 4 validaciones de vacaciones responden `400`: fechas incoherentes, fecha pasada, solapamiento (con `periodoConflicto`) y empleado inexistente.
+8. `DELETE /empleados/{id}` — el empleado pasa a `RETIRADO`; su perfil queda `archivado: true` y aparece la notificación `DESVINCULACION`.
+9. `GET /empleados?estado=RETIRADO` — el empleado aparece en la auditoría.
+
+Los pasos 1 a 4, 6 y 7 están automatizados en la colección
+`Postman/Reto4-Flujo-Completo.postman_collection.json` (se ejecuta con el
+Collection Runner y se puede repetir sin tocar nada). Los pasos 5, 8 y 9 se
+prueban a mano con los endpoints indicados.
+
+## Evidencia
+
+### Deduplicación
+
+Se publicó dos veces desde la interfaz de RabbitMQ el mismo evento
+`empleado.creado` (mismo `id` de envelope). Resultado en el sistema integrado:
+una sola notificación y un solo perfil, y los logs de `notificaciones-service` y
+`perfiles-service` muestran el descarte del duplicado. Ejemplo del log:
+
+```
+[NOTIFICACIÓN] Tipo: BIENVENIDA | Para: dedup.test@empresa.com | Mensaje: "Bienvenido Dedup Test a la empresa"
+Evento dedup-test-0001 ya procesado, se descarta (deduplicación)
 ```
 
-**Resultado real obtenido:** el acceso vía Gateway respondió `200` con
-datos reales; el acceso directo al puerto `8081` fue rechazado
-, confirmando que `expose:` funciona correctamente.
+### Persistencia
 
-### Prueba 2 — Salto en el tiempo de respuesta del Circuit Breaker
-
-Con `departamentos-service` detenido, se enviaron 5 peticiones de
-registro de empleado consecutivas:
-
-| Petición | Tiempo de respuesta | Estado del circuito |
-|---|---|---|
-| 1 | 12710 ms | CLOSED |
-| 2 | 9733 ms | CLOSED |
-| 3 | 9793 ms | **OPEN** (recién se abrió) |
-| 4 | 80 ms | OPEN |
-| 5 | 70 ms | OPEN |
-
-Las primeras 3 peticiones agotaron el retry completo (1s+2s+4s) antes
-de fallar, luego al acumular 3 fallos consecutivos (100% de tasa de fallo,
-supera el umbral de 50%), por ende el circuito se abrió. Las peticiones 4 y 5
-respondieron **~150 veces más rápido**, sin tocar la red.
-
-### Prueba 3 — Recuperación automática
-
-Tras esperar 35 segundos en estado `OPEN` (sin ninguna petición de por
-medio), el endpoint de observabilidad mostró el estado `HALF_OPEN` —
-confirmando que Resilience4j programa la transición automáticamente al
-vencer el tiempo configurado.
-
-Al restaurar `departamentos-service` y enviar una petición con un
-`departamentoId` **inexistente** (prueba deliberada: si el sistema
-solo estuviera "fingiendo" recuperación, habría respondido `200` con
-el fallback de siempre), la respuesta real fue **`400 Bad Request`**
-— confirmando que volvió a consultar de verdad. El circuito quedó en
-`CLOSED`.
-
-## Evidencia de persistencia (Reto 2, sigue vigente)
+Con datos en `empleados`, `perfiles`, `notificaciones` y `vacaciones`:
 
 ```bash
-docker compose down          # destruye contenedores, conserva volúmenes
+docker compose down        # conserva los volúmenes
 docker compose up -d
-curl http://localhost:8080/empleados/1
-# -> El empleado sigue existiendo: los datos viven en el volumen
+# los cuatro conteos son iguales que antes: los datos viven en los volúmenes
 
-docker compose down -v       # destruye contenedores Y volúmenes
-docker compose up -d --build
-curl http://localhost:8080/empleados/1
-# -> 404: el volumen se borró y con él los datos
+docker compose down -v     # destruye también los volúmenes
+docker compose up -d
+# los cuatro conteos quedan en 0
 ```
-
-## Documentación OpenAPI (Swagger)
-
-**Limitación conocida introducida en el Reto 3:** el Gateway actual
-solo reenvía rutas bajo `/empleados/*` y `/departamentos/*`. Swagger UI
-vive en la raíz de cada servicio (`/swagger-ui/index.html` y `/docs`
-respectivamente, fuera de esos prefijos), y como los microservicios ya
-no publican puertos al host, **Swagger no es accesible desde el
-navegador con la configuración actual**. 
-Decisión en un futuro: Agregar la ruta de Swagger al Gateway para que sea accesible desde el host.
-
-## Pruebas automatizadas (Postman)
-
-Colección con pruebas automáticas (`pm.test`):
-
-```
-/Postman/Gestion-departamentos_empleadosReto02.postman_collection.json
-```
-
-
 
 ## Documentación por servicio
 
-- [`api-gateway/README.md`](./api-gateway/README.md)
-- [`empleados-service/README.md`](./empleados-service/README.md)
-- [`departamentos-service/README.md`](./departamentos-service/README.md)
+- [`api-gateway`](./api-gateway/README.md)
+- [`empleados-service`](./empleados-service/README.md)
+- [`departamentos-service`](./departamentos-service/README.md)
+- [`perfiles-service`](./perfiles-service/README.md)
+- [`notificaciones-service`](./notificaciones-service/README.md)
+- [`vacaciones-service`](./vacaciones-service/README.md)
 
-## Vacaciones-service RETO 04
-## Decisión técnica: validación de existencia del empleado
+## Pruebas automatizadas (Postman)
 
-Se evaluaron dos estrategias para la validación "el empleado debe existir":
-
-**Opción (a) — Consulta síncrona REST** *(la elegida)*: `vacaciones-service`
-llama a `GET /empleados/{id}` en `empleados-service` en el momento de
-programar el período, con un timeout explícito de 5 segundos.
-
-**Opción (b) — Réplica local por eventos**: `vacaciones-service` consumiría
-`empleado.creado` y `empleado.retirado` para mantener su propia tabla
-mínima de empleados válidos, sin depender de una llamada en vivo.
-
-**Se eligió la opción (a)** por dos razones:
-
-1. `empleados-service` ya expone `GET /empleados/{id}` desde el Reto 2 —
-   cero infraestructura nueva, menor superficie de error.
-2. Vacaciones depende por naturaleza del dominio, de que el empleado
-   exista en el sistema central. Si `empleados-service` está caído el
-   tiempo suficiente como para no poder confirmar un empleado, es
-   razonable que tampoco se puedan programar vacaciones para él.
-
-**Costo asumido:** con esta estrategia, `vacaciones-service` queda
-dependiente a la disponibilidad de `empleados-service` — si está caído,
-la validación 4 tampoco puede resolverse. Se mitiga parcialmente con
-un timeout explícito (5s) para no dejar la petición del cliente
-colgada indefinidamente.
+- `Postman/Reto4-Flujo.postman_collection.json` — Reto 4: vacaciones y flujo asincrónico.
+- `Postman/Gestion-departamentos_empleadosReto03.postman_collection.json` — empleados y departamentos, por el Gateway.

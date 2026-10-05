@@ -21,6 +21,8 @@ func main() {
 
 	http.HandleFunc("/notificaciones", manejarNotificaciones)
 	http.HandleFunc("/notificaciones/", manejarNotificaciones)
+	http.HandleFunc("/notificaciones/docs", servirSwaggerUI)
+    http.HandleFunc("/notificaciones/openapi.json", servirOpenAPI)
 
 	log.Println("notificaciones-service escuchando en el puerto 8084")
 	log.Fatal(http.ListenAndServe(":8084", nil))

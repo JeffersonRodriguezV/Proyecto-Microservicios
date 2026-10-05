@@ -2,7 +2,8 @@ using Microsoft.Data.Sqlite;
 
 public static class Db
 {
-    private const string ConnectionString = "Data Source=perfiles.db";
+    private static readonly string RutaBd = Environment.GetEnvironmentVariable("DB_PATH") ?? "perfiles.db";
+    private static readonly string ConnectionString = $"Data Source={RutaBd}";
 
     public static SqliteConnection ObtenerConexion()
     {

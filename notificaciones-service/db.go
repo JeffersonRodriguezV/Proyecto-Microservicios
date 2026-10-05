@@ -11,7 +11,7 @@ var db *sql.DB
 
 func inicializarDB() {
 	var err error
-	db, err = sql.Open("sqlite", "./notificaciones.db")
+	db, err = sql.Open("sqlite", obtenerEnv("DB_PATH", "./notificaciones.db"))
 	if err != nil {
 		log.Fatal("No se pudo abrir la base de datos:", err)
 	}

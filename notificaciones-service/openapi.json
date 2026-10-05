@@ -1,0 +1,150 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Notificaciones Service API",
+    "version": "1.0.0",
+    "description": "Servicio puramente reactivo: consume empleado.creado, empleado.retirado y vacaciones.programadas del broker y registra una notificación simulada por cada uno. Esta API solo permite consultar el historial; las notificaciones no se crean por REST."
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "paths": {
+    "/notificaciones": {
+      "get": {
+        "summary": "Lista todas las notificaciones registradas",
+        "description": "Ordenadas de la más reciente a la más antigua.",
+        "responses": {
+          "200": {
+            "description": "Lista de notificaciones (vacía si aún no hay ninguna)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Notificacion"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error consultando la base de datos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notificaciones/{empleadoId}": {
+      "get": {
+        "summary": "Lista las notificaciones de un empleado",
+        "description": "Ordenadas de la más reciente a la más antigua. Si el empleado no tiene notificaciones, o no existe, responde 200 con una lista vacía.",
+        "parameters": [
+          {
+            "name": "empleadoId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "1"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Notificaciones del empleado (lista vacía si no tiene)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Notificacion"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error consultando la base de datos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Notificacion": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Coincide con el id del evento que la originó (sirve también para deduplicar).",
+            "example": "923af782-39a8-4aba-938e-37e0cac3d433"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "BIENVENIDA",
+              "DESVINCULACION",
+              "VACACIONES"
+            ],
+            "description": "BIENVENIDA viene de empleado.creado, DESVINCULACION de empleado.retirado y VACACIONES de vacaciones.programadas."
+          },
+          "destinatario": {
+            "type": "string",
+            "description": "Correo del empleado.",
+            "example": "juan.perez@empresa.com"
+          },
+          "mensaje": {
+            "type": "string",
+            "example": "Bienvenido Juan Pérez a la empresa"
+          },
+          "fechaEnvio": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-03T02:42:30Z"
+          },
+          "empleadoId": {
+            "type": "string",
+            "example": "1"
+          }
+        },
+        "required": [
+          "id",
+          "tipo",
+          "destinatario",
+          "mensaje",
+          "fechaEnvio",
+          "empleadoId"
+        ]
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "integer",
+            "example": 500
+          },
+          "mensaje": {
+            "type": "string",
+            "example": "Error consultando notificaciones"
+          }
+        }
+      }
+    }
+  }
+}
