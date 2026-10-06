@@ -106,6 +106,31 @@ services:
     networks:
       - microservices-network
     restart: unless-stopped
+  # ========================
+  # BASE DE DATOS: AUTH (MySQL)
+  # ========================
+  db-auth:
+    image: mysql:8.0
+    container_name: db-auth
+    environment:
+      MYSQL_DATABASE: auth_db
+      MYSQL_USER: auth_user
+      MYSQL_PASSWORD: auth_pass
+      MYSQL_ROOT_PASSWORD: root_auth_pass
+    volumes:
+      - db-auth-data:/var/lib/mysql
+      - ./auth-service/database:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "3307:3306"   # TEMPORAL, solo para desarrollo local: se quita antes del commit
+    healthcheck:
+      test: [ "CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - microservices-network
+    restart: unless-stopped
 
   # ==========================================================================
   # PERFILES-SERVICE (C# / .NET) - consume eventos + expone REST
@@ -253,7 +278,7 @@ volumes:
   perfiles-data:                        # SQLite de perfiles
   notificaciones-data:                  # SQLite de notificaciones
   vacaciones-data:                      # SQLite de vacaciones
-
+  db-auth-data:                        # MySQL de auth
 # ============================================================================
 # REDES
 # ============================================================================
