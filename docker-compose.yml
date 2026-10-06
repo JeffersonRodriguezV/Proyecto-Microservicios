@@ -121,7 +121,7 @@ services:
       - db-auth-data:/var/lib/mysql
       - ./auth-service/database:/docker-entrypoint-initdb.d:ro
     ports:
-      - "3307:3306"   # TEMPORAL, solo para desarrollo local: se quita antes del commit
+
     healthcheck:
       test: [ "CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent" ]
       interval: 10s
