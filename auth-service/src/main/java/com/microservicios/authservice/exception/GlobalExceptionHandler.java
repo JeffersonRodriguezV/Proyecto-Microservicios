@@ -12,14 +12,19 @@ import java.time.LocalDateTime;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(CredencialesInvalidasException.class)
-    public ResponseEntity<ErrorResponse> credenciales(CredencialesInvalidasException e) {
+    @ExceptionHandler({CredencialesInvalidasException.class, TokenAccesoInvalidoException.class})
+    public ResponseEntity<ErrorResponse> noAutenticado(RuntimeException e) {
         return respuesta(HttpStatus.UNAUTHORIZED, e.getMessage());
     }
 
     @ExceptionHandler(CuentaNoActivaException.class)
     public ResponseEntity<ErrorResponse> cuentaNoActiva(CuentaNoActivaException e) {
         return respuesta(HttpStatus.FORBIDDEN, e.getMessage());
+    }
+
+    @ExceptionHandler({TokenInvalidoException.class, PasswordInvalidaException.class})
+    public ResponseEntity<ErrorResponse> peticionRechazada(RuntimeException e) {
+        return respuesta(HttpStatus.BAD_REQUEST, e.getMessage());
     }
 
     @ExceptionHandler({MethodArgumentNotValidException.class, HttpMessageNotReadableException.class})

@@ -6,3 +6,9 @@
 notepad .gitignore
 # IntelliJ IDEA
 .idea/
+
+# Archivos locales
+.env
+docker-compose.override.yml
+dev-env.ps1
+target/

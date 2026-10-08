@@ -121,6 +121,7 @@ services:
       - db-auth-data:/var/lib/mysql
       - ./auth-service/database:/docker-entrypoint-initdb.d:ro
     ports:
+      - "3307:3306"
 
     healthcheck:
       test: [ "CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent" ]
@@ -267,6 +268,46 @@ services:
     networks:
       - microservices-network
     restart: unless-stopped
+
+  # =========================================================
+  # AUTH SERVICE (Reto 5) - emite y gestiona JWT
+  # =========================================================
+  auth-service:
+    build:
+      context: ./auth-service
+    container_name: auth-service
+    restart: unless-stopped
+
+    expose:
+      - "8086"    # solo visible dentro de la red; el Gateway lo alcanza como http://auth-service:8086
+
+    environment:
+      DB_URL: jdbc:mysql://db-auth:3306/auth_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      DB_USERNAME: auth_user
+      DB_PASSWORD: auth_pass
+      RABBITMQ_HOST: message-broker
+      # Secreto compartido con el Gateway. Sin valor por defecto: si falta, compose se detiene.
+      JWT_SECRET: ${JWT_SECRET:?Defina JWT_SECRET en el archivo .env}
+      JWT_EXPIRATION_MINUTES: ${JWT_EXPIRATION_MINUTES:-60}
+      JWT_RESET_EXPIRATION_MINUTES: ${JWT_RESET_EXPIRATION_MINUTES:-60}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@empresa.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin123!}
+
+    depends_on:
+      db-auth:
+        condition: service_healthy
+      message-broker:
+        condition: service_healthy
+
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- http://localhost:8086/actuator/health || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+    networks:
+      - microservices-network
 
 # ============================================================================
 # VOLÚMENES NOMBRADOS
