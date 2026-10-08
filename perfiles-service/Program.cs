@@ -1,13 +1,30 @@
+using Microsoft.OpenApi;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-c.SwaggerDoc("v1", new Microsoft.OpenApi.OpenApiInfo
+    c.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "Perfiles Service API",
         Version = "v1",
         Description = "Gestión de perfiles de empleados, reactivo + REST"
+    });
+
+    // Reto 5: el contrato declara que los endpoints requieren un JWT emitido por auth-service.
+    // La validación real la hace el API Gateway; aquí solo se documenta para Swagger UI.
+    c.AddSecurityDefinition("BearerAuth", new OpenApiSecurityScheme
+    {
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        Description = "Pegue el accessToken devuelto por POST /auth/login (sin el prefijo 'Bearer ')."
+    });
+
+    c.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+    {
+        [new OpenApiSecuritySchemeReference("BearerAuth", document)] = new List<string>()
     });
 });
 
