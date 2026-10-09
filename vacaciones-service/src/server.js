@@ -5,6 +5,8 @@ const { publicar } = require('./eventoPublisher');
 const { contarDiasHabiles } = require('./diasHabiles');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
+const scheduler = require('./scheduler');
+const desarrollo = require('./desarrollo');
 const app = express();
 app.use(express.json());
 app.use('/vacaciones/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
@@ -18,6 +20,7 @@ function error(res, status, mensaje, extra = {}) {
  * /health:
  *   get:
  *     summary: Verifica que el servicio esté activo
+ *     security: []
  *     responses:
  *       200:
  *         description: El servicio está funcionando
@@ -64,10 +67,9 @@ app.post('/vacaciones', async (req, res) => {
         return error(res, 400, 'fechaFin debe ser posterior a fechaInicio');
     }
 
-    // Validación 2: fechas en el pasado
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-    if (new Date(fechaInicio) < hoy) {
+    // Validación 2: fechas en el pasado. Se compara por fecha (AAAA-MM-DD) contra el "hoy" de la zona
+    // horaria del servicio, la misma que usa el scheduler; comparar instantes fallaba con TZ distinta de UTC.
+    if (String(fechaInicio).slice(0, 10) < scheduler.hoyLocal()) {
         return error(res, 400, 'fechaInicio no puede ser una fecha pasada');
     }
 
@@ -85,8 +87,7 @@ app.post('/vacaciones', async (req, res) => {
         return error(res, 400, `El empleado con id '${empleadoId}' no existe`);
     }
 
-    const creado = repo.crear({ empleadoId, fechaInicio, fechaFin });
-
+    const creado = repo.crear({ empleadoId, email: empleado.email, fechaInicio, fechaFin });
     publicar('vacaciones.programadas', {
         vacacionesId: creado.id,
         empleadoId,
@@ -176,6 +177,13 @@ app.delete('/vacaciones/:id', (req, res) => {
     res.status(200).json(cancelado);
 });
 
+// Endpoints de desarrollo (forzar-inicio / forzar-fin): solo si DEV_ENDPOINTS=true
+if (desarrollo.habilitado) {
+    app.use(desarrollo.router);
+    console.log('ATENCIÓN: endpoints de desarrollo habilitados (DEV_ENDPOINTS=true)');
+}
+
 app.listen(PORT, () => {
     console.log(`vacaciones-service escuchando en el puerto ${PORT}`);
+    scheduler.arrancar();
 });

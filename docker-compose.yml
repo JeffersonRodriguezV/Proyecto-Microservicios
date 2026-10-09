@@ -206,6 +206,12 @@ services:
       RABBITMQ_PASSWORD: admin
       # --- Validación síncrona del empleado (decisión documentada en el README) ---
       EMPLEADOS_URL: http://empleados-service:8080
+      # --- Scheduler (Reto 5): frecuencia configurable y zona horaria que define "hoy" ---
+      SCHEDULER_ENABLED: "true"
+      SCHEDULER_INTERVAL_SECONDS: ${VACACIONES_SCHEDULER_SECONDS:-60}
+      TZ: America/Bogota
+      # Endpoints de desarrollo forzar-inicio / forzar-fin: solo para demos y pruebas
+      DEV_ENDPOINTS: ${VACACIONES_DEV_ENDPOINTS:-true}
     volumes:
       - vacaciones-data:/data
     depends_on:
