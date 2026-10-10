@@ -20,7 +20,7 @@ const RUTAS_PUBLICAS = [
 ];
 
 // Documentación Swagger/OpenAPI de cada servicio (solo lectura).
-const REGEX_DOCS = /\/(swagger|api-docs|openapi|docs)(\/|\.|$)/i;
+const REGEX_DOCS = /\/(swagger[\w-]*|api-docs|openapi[\w.]*|docs)(\/|\.|$)/i;
 
 function respuesta(res, status, mensaje) {
     res.status(status).json({ status, mensaje, timestamp: new Date().toISOString() });
