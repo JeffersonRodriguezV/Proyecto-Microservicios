@@ -100,9 +100,11 @@
             "enum": [
               "BIENVENIDA",
               "DESVINCULACION",
-              "VACACIONES"
+              "VACACIONES",
+              "SEGURIDAD",
+              "CUENTA"
             ],
-            "description": "BIENVENIDA viene de empleado.creado, DESVINCULACION de empleado.retirado y VACACIONES de vacaciones.programadas."
+            "description": "DESVINCULACION viene de empleado.retirado, VACACIONES de vacaciones.programadas, SEGURIDAD de usuario.creado y usuario.recuperacion, y CUENTA de cuenta.activada y cuenta.desactivada."
           },
           "destinatario": {
             "type": "string",

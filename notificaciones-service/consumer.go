@@ -28,7 +28,6 @@ func iniciarConsumidor() {
 
 	url := fmt.Sprintf("amqp://%s:%s@%s:%s/", usuario, password, host, puerto)
 
-
 	conn, err := amqp.Dial(url)
 	if err != nil {
 		log.Fatal("No se pudo conectar a RabbitMQ:", err)
@@ -49,7 +48,21 @@ func iniciarConsumidor() {
 		log.Fatal("No se pudo declarar la cola:", err)
 	}
 
-	eventosRelevantes := []string{"empleado.creado", "empleado.retirado", "vacaciones.programadas"}
+	// Reto 5: la bienvenida del onboarding sale de usuario.creado (trae el token de
+	// activación), no de empleado.creado. Se retira ese enlace de la cola, que es
+	// durable y conserva el binding del Reto 4; si ya no existe, el unbind es inocuo.
+	if err := ch.QueueUnbind(cola.Name, "empleado.creado", exchange, nil); err != nil {
+		log.Println("Aviso al desenlazar empleado.creado:", err)
+	}
+
+	eventosRelevantes := []string{
+		"empleado.retirado",
+		"vacaciones.programadas",
+		"usuario.creado",
+		"usuario.recuperacion",
+		"cuenta.activada",
+		"cuenta.desactivada",
+	}
 	for _, routingKey := range eventosRelevantes {
 		err = ch.QueueBind(cola.Name, routingKey, exchange, false, nil)
 		if err != nil {
@@ -62,7 +75,7 @@ func iniciarConsumidor() {
 		log.Fatal("No se pudo iniciar el consumo:", err)
 	}
 
-	log.Println("Escuchando eventos: empleado.creado, empleado.retirado, vacaciones.programadas")
+	log.Println("Escuchando eventos: empleado.retirado, vacaciones.programadas, usuario.creado, usuario.recuperacion, cuenta.activada, cuenta.desactivada")
 
 	for msg := range mensajes {
 		procesarMensaje(msg)
@@ -106,28 +119,62 @@ func procesarMensaje(msg amqp.Delivery) {
 	msg.Ack(false)
 }
 
+// texto extrae un campo string del data del evento ("" si no existe).
+func texto(data map[string]interface{}, clave string) string {
+	valor, _ := data[clave].(string)
+	return valor
+}
+
+// enlaceReset simula el enlace que llevaría el correo real (Reto 5).
+func enlaceReset(token string) string {
+	return "https://app.empresa.com/reset?token=" + token
+}
+
 func construirNotificacion(envelope EventoEnvelope) *Notificacion {
-	empleadoID, _ := envelope.Data["empleadoId"].(string)
-	email, _ := envelope.Data["email"].(string)
+	empleadoID := texto(envelope.Data, "empleadoId")
+	email := texto(envelope.Data, "email")
 
 	var tipo, mensaje string
 
 	switch envelope.Type {
-	case "empleado.creado":
-		nombre, _ := envelope.Data["nombre"].(string)
-		apellido, _ := envelope.Data["apellido"].(string)
-		tipo = "BIENVENIDA"
-		mensaje = fmt.Sprintf("Bienvenido %s %s a la empresa", nombre, apellido)
-
 	case "empleado.retirado":
 		tipo = "DESVINCULACION"
 		mensaje = "Su cuenta ha sido desactivada, gracias por su trabajo"
 
 	case "vacaciones.programadas":
-		fechaInicio, _ := envelope.Data["fechaInicio"].(string)
-		fechaFin, _ := envelope.Data["fechaFin"].(string)
 		tipo = "VACACIONES"
-		mensaje = fmt.Sprintf("Sus vacaciones del %s al %s han sido confirmadas", fechaInicio, fechaFin)
+		mensaje = fmt.Sprintf("Sus vacaciones del %s al %s han sido confirmadas",
+			texto(envelope.Data, "fechaInicio"), texto(envelope.Data, "fechaFin"))
+
+	case "usuario.creado":
+		// Correo de bienvenida: es el que trae el token de activación.
+		tipo = "SEGURIDAD"
+		mensaje = fmt.Sprintf("Bienvenido. Para establecer su contraseña use este enlace: %s (expira %s)",
+			enlaceReset(texto(envelope.Data, "tokenActivacion")), texto(envelope.Data, "expiraEn"))
+
+	case "usuario.recuperacion":
+		// Este evento no trae empleadoId (ver catálogo 3.5): solo email y token.
+		tipo = "SEGURIDAD"
+		mensaje = fmt.Sprintf("Para restablecer su contraseña use este enlace: %s (expira %s)",
+			enlaceReset(texto(envelope.Data, "tokenRecuperacion")), texto(envelope.Data, "expiraEn"))
+
+	case "cuenta.desactivada":
+		tipo = "CUENTA"
+		permanente, _ := envelope.Data["permanente"].(bool)
+		if permanente {
+			mensaje = "Su cuenta fue desactivada de forma permanente."
+		} else {
+			mensaje = fmt.Sprintf("Su cuenta fue desactivada temporalmente (motivo: %s). Se reactivará al finalizar el período.",
+				texto(envelope.Data, "motivo"))
+		}
+
+	case "cuenta.activada":
+		tipo = "CUENTA"
+		if texto(envelope.Data, "motivo") == "FIN_VACACIONES" {
+			mensaje = "Bienvenido de regreso. Su cuenta fue reactivada."
+		} else {
+			mensaje = "Su cuenta fue activada. Ya puede iniciar sesión."
+		}
 
 	default:
 		log.Println("Tipo de evento no manejado:", envelope.Type)
