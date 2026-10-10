@@ -63,8 +63,9 @@ app.post('/vacaciones', async (req, res) => {
     }
 
     // Validación 1: fechas incoherentes
-    if (new Date(fechaFin) <= new Date(fechaInicio)) {
-        return error(res, 400, 'fechaFin debe ser posterior a fechaInicio');
+    // Reto 5, paso 12: se permite un período de un solo día (fechaFin == fechaInicio).
+    if (new Date(fechaFin) < new Date(fechaInicio)) {
+        return error(res, 400, 'fechaFin no puede ser anterior a fechaInicio');
     }
 
     // Validación 2: fechas en el pasado. Se compara por fecha (AAAA-MM-DD) contra el "hoy" de la zona
