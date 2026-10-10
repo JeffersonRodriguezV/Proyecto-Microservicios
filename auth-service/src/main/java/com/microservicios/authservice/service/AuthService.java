@@ -44,8 +44,10 @@ public class AuthService {
             throw new CredencialesInvalidasException();
         }
 
+        // Reto 5 (pruebas 13, 15, 17): una cuenta suspendida o desactivada falla con 401.
+        // Mismo error que una credencial incorrecta: no revela que el correo existe.
         if (usuario.getEstado() != EstadoCuenta.ACTIVA) {
-            throw new CuentaNoActivaException(usuario.getEstado());
+            throw new CredencialesInvalidasException();
         }
 
         return new LoginResponse(jwt.generarTokenAcceso(usuario), "Bearer", jwt.getExpiracionSegundos());
