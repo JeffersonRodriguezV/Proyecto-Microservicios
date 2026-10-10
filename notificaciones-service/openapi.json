@@ -10,6 +10,11 @@
       "url": "/"
     }
   ],
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ],
   "paths": {
     "/notificaciones": {
       "get": {
@@ -86,6 +91,15 @@
     }
   },
   "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Token JWT obtenido en POST /auth/login. Se envía como Authorization: Bearer <token>."
+      }
+    },
+
     "schemas": {
       "Notificacion": {
         "type": "object",
