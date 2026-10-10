@@ -30,9 +30,8 @@ Cliente HTTP (curl, Postman, navegador)
 
 Comunicación síncrona: `empleados-service` → `departamentos-service` (valida el
 departamento) y `vacaciones-service` → `empleados-service` (valida el empleado).
-Se publican al host el Gateway (`8080`), el broker (`5672` y la interfaz `15672`)
-y la base de `auth-service` (`3307`, solo para inspección); el resto usa
-`expose:` y solo es alcanzable dentro de la red de Docker.
+Solo el Gateway (`8080`) y la interfaz del broker (`15672`) se publican al host;
+el resto usa `expose:` y solo es alcanzable dentro de la red de Docker.
 
 ## Servicios y lenguajes
 
