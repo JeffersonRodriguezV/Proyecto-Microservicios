@@ -12,8 +12,7 @@ Java 21 · Spring Boot · MySQL 8 · RabbitMQ · puerto interno **8086**.
 | POST | `/auth/reset-password` | Establece contraseña con el token de recuperación | Token de recuperación |
 | POST | `/auth/change-password` | Cambia la contraseña del usuario autenticado | Bearer JWT |
 
-Swagger UI: `/swagger-ui.html` · Contrato: `/v3/api-docs` (esquema `BearerAuth`).
-
+Swagger UI: `http://localhost:8080/auth/swagger-ui.html` (a través del Gateway) · Contrato: `/auth/api-docs` (esquema `BearerAuth`).
 ## Cómo obtener un token
 
 ```bash
