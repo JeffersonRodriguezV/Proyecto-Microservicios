@@ -1,6 +1,5 @@
 using System.Text;
 using System.Text.Json;
-using Microsoft.Data.Sqlite;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
@@ -63,90 +62,12 @@ public static class RabbitMqConsumer
         Console.WriteLine("Escuchando eventos: empleado.creado, empleado.actualizado, empleado.retirado");
     }
 
+    /// <summary>
+    /// Adaptador: abre la conexión a SQLite y delega la regla de negocio en ProcesadorEventos.
+    /// </summary>
     private static void ProcesarMensaje(EventoEnvelope envelope)
     {
-        using var conexion = Db.ObtenerConexion();
-
-        var checkCmd = conexion.CreateCommand();
-        checkCmd.CommandText = "SELECT COUNT(*) FROM eventos_procesados WHERE id = @id";
-        checkCmd.Parameters.AddWithValue("@id", envelope.Id);
-        var existe = (long)checkCmd.ExecuteScalar()! > 0;
-
-        if (existe)
-        {
-            Console.WriteLine($"Evento {envelope.Id} ya procesado, se descarta (deduplicación)");
-            return;
-        }
-
-        var empleadoId = envelope.Data.GetProperty("empleadoId").GetString() ?? "";
-
-        switch (envelope.Type)
-        {
-            case "empleado.creado":
-                CrearPerfilPorDefecto(conexion, envelope);
-                break;
-            case "empleado.actualizado":
-                SincronizarPerfil(conexion, envelope);
-                break;
-            case "empleado.retirado":
-                ArchivarPerfil(conexion, empleadoId);
-                break;
-        }
-
-        var insertCmd = conexion.CreateCommand();
-        insertCmd.CommandText = "INSERT INTO eventos_procesados (id, procesado_en) VALUES (@id, @fecha)";
-        insertCmd.Parameters.AddWithValue("@id", envelope.Id);
-        insertCmd.Parameters.AddWithValue("@fecha", DateTime.UtcNow.ToString("o"));
-        insertCmd.ExecuteNonQuery();
-    }
-
-    private static void CrearPerfilPorDefecto(SqliteConnection conexion, EventoEnvelope envelope)
-    {
-        var empleadoId = envelope.Data.GetProperty("empleadoId").GetString() ?? "";
-        var nombre = envelope.Data.GetProperty("nombre").GetString() ?? "";
-        var email = envelope.Data.GetProperty("email").GetString() ?? "";
-
-        var cmd = conexion.CreateCommand();
-        cmd.CommandText = @"
-            INSERT INTO perfiles (id, empleado_id, nombre, email, fecha_creacion)
-            VALUES (@id, @empleadoId, @nombre, @email, @fecha)
-        ";
-        cmd.Parameters.AddWithValue("@id", Guid.NewGuid().ToString());
-        cmd.Parameters.AddWithValue("@empleadoId", empleadoId);
-        cmd.Parameters.AddWithValue("@nombre", nombre);
-        cmd.Parameters.AddWithValue("@email", email);
-        cmd.Parameters.AddWithValue("@fecha", DateTime.UtcNow.ToString("o"));
-        cmd.ExecuteNonQuery();
-
-        Console.WriteLine($"Perfil creado para empleado {empleadoId}");
-    }
-
-    private static void SincronizarPerfil(SqliteConnection conexion, EventoEnvelope envelope)
-    {
-        var empleadoId = envelope.Data.GetProperty("empleadoId").GetString() ?? "";
-        var nombre = envelope.Data.GetProperty("nombre").GetString() ?? "";
-        var email = envelope.Data.GetProperty("email").GetString() ?? "";
-
-        var cmd = conexion.CreateCommand();
-        cmd.CommandText = @"
-            UPDATE perfiles SET nombre = @nombre, email = @email
-            WHERE empleado_id = @empleadoId
-        ";
-        cmd.Parameters.AddWithValue("@nombre", nombre);
-        cmd.Parameters.AddWithValue("@email", email);
-        cmd.Parameters.AddWithValue("@empleadoId", empleadoId);
-        cmd.ExecuteNonQuery();
-
-        Console.WriteLine($"Perfil sincronizado para empleado {empleadoId}");
-    }
-
-    private static void ArchivarPerfil(SqliteConnection conexion, string empleadoId)
-    {
-        var cmd = conexion.CreateCommand();
-        cmd.CommandText = "UPDATE perfiles SET archivado = 1 WHERE empleado_id = @empleadoId";
-        cmd.Parameters.AddWithValue("@empleadoId", empleadoId);
-        cmd.ExecuteNonQuery();
-
-        Console.WriteLine($"Perfil archivado para empleado {empleadoId}");
+        using var almacen = new AlmacenPerfilesSqlite(Db.ObtenerConexion());
+        new ProcesadorEventos(almacen, Console.WriteLine).Procesar(envelope);
     }
 }

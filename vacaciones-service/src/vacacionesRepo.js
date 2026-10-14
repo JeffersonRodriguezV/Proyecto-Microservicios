@@ -1,4 +1,5 @@
 const db = require('./db');
+const { hayCruce } = require('./validaciones');
 
 function crear({ empleadoId, email, fechaInicio, fechaFin }) {
     const fechaCreacion = new Date().toISOString();
@@ -33,18 +34,15 @@ function listarPorEmpleado(empleadoId) {
     return filas.map(mapear);
 }
 
-// Busca un período PROGRAMADA o EN_CURSO del mismo empleado que se
-// cruce con el rango solicitado. Dos rangos [a,b] y [c,d] se cruzan
-// si a <= d y c <= b.
+// Busca un período PROGRAMADA o EN_CURSO del mismo empleado que se cruce con el rango
+// solicitado. La regla del cruce vive en validaciones.js (función pura, probada unitariamente).
 function buscarSolapamiento(empleadoId, fechaInicio, fechaFin) {
-    const fila = db.prepare(`
+    const activos = db.prepare(`
         SELECT * FROM vacaciones
-        WHERE empleado_id = ?
-          AND estado IN ('PROGRAMADA', 'EN_CURSO')
-          AND fecha_inicio <= ?
-          AND fecha_fin >= ?
-    `).get(empleadoId, fechaFin, fechaInicio);
+        WHERE empleado_id = ? AND estado IN ('PROGRAMADA', 'EN_CURSO')
+    `).all(empleadoId);
 
+    const fila = activos.find((f) => hayCruce(f.fecha_inicio, f.fecha_fin, fechaInicio, fechaFin));
     return fila ? mapear(fila) : null;
 }
 

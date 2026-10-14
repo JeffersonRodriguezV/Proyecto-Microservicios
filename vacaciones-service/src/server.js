@@ -2,12 +2,12 @@ const express = require('express');
 const repo = require('./vacacionesRepo');
 const { obtenerEmpleado } = require('./empleadosClient');
 const { publicar } = require('./eventoPublisher');
-const { contarDiasHabiles } = require('./diasHabiles');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
 const scheduler = require('./scheduler');
 const desarrollo = require('./desarrollo');
 const app = express();
+const { crearServicioVacaciones } = require('./vacacionesService');
 app.use(express.json());
 app.use('/vacaciones/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 const PORT = process.env.PORT || 8085;
@@ -15,6 +15,15 @@ const PORT = process.env.PORT || 8085;
 function error(res, status, mensaje, extra = {}) {
     res.status(status).json({ status, mensaje, timestamp: new Date().toISOString(), ...extra });
 }
+
+// Composición: aquí se "enchufan" las dependencias reales al caso de uso.
+// En las pruebas unitarias se le pasan dobles en su lugar.
+const vacacionesService = crearServicioVacaciones({
+    repo,
+    obtenerEmpleado,
+    publicar,
+    hoy: () => scheduler.hoyLocal(),
+});
 /**
  * @openapi
  * /health:
@@ -56,49 +65,11 @@ app.get('/health', (req, res) => {
  *         description: Alguna de las 4 validaciones falló
  */
 app.post('/vacaciones', async (req, res) => {
-    const { empleadoId, fechaInicio, fechaFin } = req.body;
-
-    if (!empleadoId || !fechaInicio || !fechaFin) {
-        return error(res, 400, 'empleadoId, fechaInicio y fechaFin son obligatorios');
+    const resultado = await vacacionesService.programar(req.body);
+    if (!resultado.ok) {
+        return error(res, resultado.status, resultado.mensaje, resultado.extra);
     }
-
-    // Validación 1: fechas incoherentes
-    // Reto 5, paso 12: se permite un período de un solo día (fechaFin == fechaInicio).
-    if (new Date(fechaFin) < new Date(fechaInicio)) {
-        return error(res, 400, 'fechaFin no puede ser anterior a fechaInicio');
-    }
-
-    // Validación 2: fechas en el pasado. Se compara por fecha (AAAA-MM-DD) contra el "hoy" de la zona
-    // horaria del servicio, la misma que usa el scheduler; comparar instantes fallaba con TZ distinta de UTC.
-    if (String(fechaInicio).slice(0, 10) < scheduler.hoyLocal()) {
-        return error(res, 400, 'fechaInicio no puede ser una fecha pasada');
-    }
-
-    // Validación 3: solapamiento
-    const conflicto = repo.buscarSolapamiento(empleadoId, fechaInicio, fechaFin);
-    if (conflicto) {
-        return error(res, 400, 'El empleado ya tiene un período que se cruza con el solicitado', {
-            periodoConflicto: conflicto,
-        });
-    }
-
-    // Validación 4: empleado inexistente
-    const empleado = await obtenerEmpleado(empleadoId);
-    if (!empleado) {
-        return error(res, 400, `El empleado con id '${empleadoId}' no existe`);
-    }
-
-    const creado = repo.crear({ empleadoId, email: empleado.email, fechaInicio, fechaFin });
-    publicar('vacaciones.programadas', {
-        vacacionesId: creado.id,
-        empleadoId,
-        email: empleado.email,
-        fechaInicio,
-        fechaFin,
-        diasHabiles: contarDiasHabiles(fechaInicio, fechaFin),
-    });
-
-    res.status(201).json(creado);
+    res.status(resultado.status).json(resultado.periodo);
 });
 /**
  * @openapi
