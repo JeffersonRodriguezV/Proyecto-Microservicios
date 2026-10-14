@@ -2,13 +2,12 @@ const express = require('express');
 const repo = require('./vacacionesRepo');
 const { obtenerEmpleado } = require('./empleadosClient');
 const { publicar } = require('./eventoPublisher');
-const { contarDiasHabiles } = require('./diasHabiles');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
 const scheduler = require('./scheduler');
 const desarrollo = require('./desarrollo');
 const app = express();
-const { validarCamposObligatorios, validarOrdenFechas, validarNoPasada } = require('./validaciones');
+const { crearServicioVacaciones } = require('./vacacionesService');
 app.use(express.json());
 app.use('/vacaciones/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 const PORT = process.env.PORT || 8085;
@@ -16,6 +15,15 @@ const PORT = process.env.PORT || 8085;
 function error(res, status, mensaje, extra = {}) {
     res.status(status).json({ status, mensaje, timestamp: new Date().toISOString(), ...extra });
 }
+
+// Composición: aquí se "enchufan" las dependencias reales al caso de uso.
+// En las pruebas unitarias se le pasan dobles en su lugar.
+const vacacionesService = crearServicioVacaciones({
+    repo,
+    obtenerEmpleado,
+    publicar,
+    hoy: () => scheduler.hoyLocal(),
+});
 /**
  * @openapi
  * /health:
@@ -57,43 +65,11 @@ app.get('/health', (req, res) => {
  *         description: Alguna de las 4 validaciones falló
  */
 app.post('/vacaciones', async (req, res) => {
-    const { empleadoId, fechaInicio, fechaFin } = req.body;
-
-    // Validaciones 1 y 2 + campos obligatorios: reglas puras en validaciones.js (probadas unitariamente).
-    // El operador || corta en la primera que falla, igual que los "return" encadenados de antes.
-    const errorValidacion =
-        validarCamposObligatorios(req.body) ||
-        validarOrdenFechas(fechaInicio, fechaFin) ||
-        validarNoPasada(fechaInicio, scheduler.hoyLocal());
-    if (errorValidacion) {
-        return error(res, 400, errorValidacion);
+    const resultado = await vacacionesService.programar(req.body);
+    if (!resultado.ok) {
+        return error(res, resultado.status, resultado.mensaje, resultado.extra);
     }
-
-    // Validación 3: solapamiento
-    const conflicto = repo.buscarSolapamiento(empleadoId, fechaInicio, fechaFin);
-    if (conflicto) {
-        return error(res, 400, 'El empleado ya tiene un período que se cruza con el solicitado', {
-            periodoConflicto: conflicto,
-        });
-    }
-
-    // Validación 4: empleado inexistente
-    const empleado = await obtenerEmpleado(empleadoId);
-    if (!empleado) {
-        return error(res, 400, `El empleado con id '${empleadoId}' no existe`);
-    }
-
-    const creado = repo.crear({ empleadoId, email: empleado.email, fechaInicio, fechaFin });
-    publicar('vacaciones.programadas', {
-        vacacionesId: creado.id,
-        empleadoId,
-        email: empleado.email,
-        fechaInicio,
-        fechaFin,
-        diasHabiles: contarDiasHabiles(fechaInicio, fechaFin),
-    });
-
-    res.status(201).json(creado);
+    res.status(resultado.status).json(resultado.periodo);
 });
 /**
  * @openapi
