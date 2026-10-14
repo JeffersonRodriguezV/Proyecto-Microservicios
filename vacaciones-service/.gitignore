@@ -1,2 +1,4 @@
 node_modules/
 vacaciones.db
+reports/
+coverage/

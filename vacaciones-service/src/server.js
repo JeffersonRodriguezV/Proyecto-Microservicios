@@ -8,6 +8,7 @@ const swaggerSpec = require('./swagger');
 const scheduler = require('./scheduler');
 const desarrollo = require('./desarrollo');
 const app = express();
+const { validarCamposObligatorios, validarOrdenFechas, validarNoPasada } = require('./validaciones');
 app.use(express.json());
 app.use('/vacaciones/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 const PORT = process.env.PORT || 8085;
@@ -58,20 +59,14 @@ app.get('/health', (req, res) => {
 app.post('/vacaciones', async (req, res) => {
     const { empleadoId, fechaInicio, fechaFin } = req.body;
 
-    if (!empleadoId || !fechaInicio || !fechaFin) {
-        return error(res, 400, 'empleadoId, fechaInicio y fechaFin son obligatorios');
-    }
-
-    // Validación 1: fechas incoherentes
-    // Reto 5, paso 12: se permite un período de un solo día (fechaFin == fechaInicio).
-    if (new Date(fechaFin) < new Date(fechaInicio)) {
-        return error(res, 400, 'fechaFin no puede ser anterior a fechaInicio');
-    }
-
-    // Validación 2: fechas en el pasado. Se compara por fecha (AAAA-MM-DD) contra el "hoy" de la zona
-    // horaria del servicio, la misma que usa el scheduler; comparar instantes fallaba con TZ distinta de UTC.
-    if (String(fechaInicio).slice(0, 10) < scheduler.hoyLocal()) {
-        return error(res, 400, 'fechaInicio no puede ser una fecha pasada');
+    // Validaciones 1 y 2 + campos obligatorios: reglas puras en validaciones.js (probadas unitariamente).
+    // El operador || corta en la primera que falla, igual que los "return" encadenados de antes.
+    const errorValidacion =
+        validarCamposObligatorios(req.body) ||
+        validarOrdenFechas(fechaInicio, fechaFin) ||
+        validarNoPasada(fechaInicio, scheduler.hoyLocal());
+    if (errorValidacion) {
+        return error(res, 400, errorValidacion);
     }
 
     // Validación 3: solapamiento
