@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+  Cobertura de las pruebas UNITARIAS. Se excluye el codigo de infraestructura (arranque, RabbitMQ,
+  SQLite): ahi no hay reglas de negocio y se verifica con las pruebas de integracion / BDD.
+  Medirlo aqui solo bajaria el porcentaje sin decir nada sobre la calidad de las pruebas.
+-->
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat Code Coverage">
+        <Configuration>
+          <Format>cobertura,lcov</Format>
+          <ExcludeByFile>**/Program.cs,**/RabbitMqConsumer.cs,**/AlmacenPerfilesSqlite.cs,**/PerfilRepo.cs,**/db.cs</ExcludeByFile>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>
