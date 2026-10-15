@@ -9,7 +9,8 @@ Given('que el sistema está desplegado y operativo', async function () {
   await this.solicitar('GET', '/health');
 });
 
-Given('que estoy autenticado como {word}', async function (rol) {
+// El rol va entre comillas, como en los ejemplos del reto: Dado que estoy autenticado como "USER"
+Given('que estoy autenticado como {string}', async function (rol) {
   await this.autenticarComo(rol);
 });
 
