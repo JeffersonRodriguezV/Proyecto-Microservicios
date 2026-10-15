@@ -139,6 +139,12 @@ public class EmpleadoService {
                         "El empleado con id " + id + " no existe"
                 ));
 
+        // Transición inválida: un empleado RETIRADO no puede retirarse otra vez
+        // (evitaría pisar la fecha de retiro original y duplicar el evento empleado.retirado).
+        if (empleado.getEstado() == EstadoEmpleado.RETIRADO) {
+            throw new IllegalArgumentException("El empleado con id " + id + " ya está retirado");
+        }
+
         empleado.setEstado(EstadoEmpleado.RETIRADO);
         empleado.setFechaRetiro(LocalDateTime.now());
 
