@@ -1,0 +1,16 @@
+$kind: http-request
+name: 08 - USER lee empleados -> 200
+url: ""
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{tokenUser}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status 200', function () {
+          pm.response.to.have.status(200);
+      });
+    language: text/javascript
+order: 9000

@@ -1,0 +1,37 @@
+$kind: http-request
+url: http://localhost:8080/empleados
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"nombre\": \"Ana\",\r
+
+    \  \"apellido\": \"Gomez\",\r
+
+    \  \"email\": \"ana.gomez@empresa.com\",\r
+
+    \  \"numeroEmpleado\": \"EMP-2026-101\",\r
+
+    \  \"cargo\": \"QA\",\r
+
+    \  \"area\": \"Ventas\",\r
+
+    \  \"departamentoId\": \"NO-EXISTE\",\r
+
+    \  \"fechaIngreso\": \"2026-03-02\"\r
+
+    }"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code es 400', function () {
+          pm.response.to.have.status(400);
+      });
+
+      pm.test('El mensaje menciona el departamentoId', function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData.mensaje.toLowerCase()).to.include('no-existe');
+      });
+    language: text/javascript
+order: 9000

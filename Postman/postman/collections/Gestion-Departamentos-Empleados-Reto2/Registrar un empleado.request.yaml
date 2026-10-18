@@ -1,0 +1,38 @@
+$kind: http-request
+url: http://localhost:8080/empleados
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"nombre\": \"Carlos\",\r
+
+    \  \"apellido\": \"Ruiz\",\r
+
+    \  \"email\": \"carlos.ruiz@empresa.com\",\r
+
+    \  \"numeroEmpleado\": \"EMP-2026-100\",\r
+
+    \  \"cargo\": \"Analista\",\r
+
+    \  \"area\": \"Tecnologia\",\r
+
+    \  \"departamentoId\": \"IT\",\r
+
+    \  \"fechaIngreso\": \"2026-03-01\"\r
+
+    }"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code es 200', function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test('departamentoValidado es true', function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData.departamentoValidado).to.eql(true);
+          pm.collectionVariables.set('empleadoId', jsonData.id);
+      });
+    language: text/javascript
+order: 4000

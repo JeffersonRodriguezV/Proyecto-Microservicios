@@ -1,0 +1,14 @@
+# Use this workspace to collaborate
+workspace:
+  id: ""
+
+localResources:
+  collections:
+    - ../Gestion-departamentos_empleadosReto02.postman_collection.json
+
+# Each entry here maps a local resource to one or more corresponding objects in Postman Cloud
+
+cloudResources:
+  collections:
+    ../postman/collections/Gestion-Departamentos-Empleados-Reto2: 631e3d4c-3ef2-4043-9a86-265e4c0b87a7
+    ../postman/collections/Gestion-Empleados-Reto1: a1d6610c-52f1-4bab-a723-f3b50b6f57d0

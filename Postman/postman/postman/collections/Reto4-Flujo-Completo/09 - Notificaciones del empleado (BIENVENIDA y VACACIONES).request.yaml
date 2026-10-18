@@ -1,0 +1,17 @@
+$kind: http-request
+url: http://localhost:8080/notificaciones/{{empleadoIdVacaciones}}
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code es 200', function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test('Hay notificacion de BIENVENIDA y de VACACIONES', function () {
+          const tipos = pm.response.json().map(function (n) { return n.tipo; });
+          pm.expect(tipos).to.include('BIENVENIDA');
+          pm.expect(tipos).to.include('VACACIONES');
+      });
+    language: text/javascript
+order: 9000

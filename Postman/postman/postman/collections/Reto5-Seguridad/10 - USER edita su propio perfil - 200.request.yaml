@@ -1,0 +1,21 @@
+$kind: http-request
+name: 10 - USER edita su propio perfil -> 200
+url: "{{baseUrl}}/perfiles/{{empleadoId}}"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: '{"telefono": "3001234567", "ciudad": "Armenia", "biografia": "Prueba de propiedad del recurso"}'
+auth:
+  type: bearer
+  credentials:
+    token: "{{tokenUser}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status 200', function () {
+          pm.response.to.have.status(200);
+      });
+    language: text/javascript
+order: 11000

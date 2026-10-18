@@ -1,0 +1,26 @@
+$kind: http-request
+name: "06 - Validacion: solapamiento"
+url: http://localhost:8080/vacaciones
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "empleadoId": "{{empleadoIdVacaciones}}",
+      "fechaInicio": "{{fechaSolapeInicio}}",
+      "fechaFin": "{{fechaSolapeFin}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code es 400', function () {
+          pm.response.to.have.status(400);
+      });
+
+      pm.test('Incluye el periodo en conflicto', function () {
+          pm.expect(pm.response.json().periodoConflicto).to.exist;
+      });
+    language: text/javascript
+order: 6000

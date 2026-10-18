@@ -1,0 +1,25 @@
+$kind: http-request
+url: http://localhost:8080/vacaciones
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "empleadoId": "{{empleadoIdVacaciones}}",
+      "fechaInicio": "{{fechaInicio}}",
+      "fechaFin": "{{fechaFin}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code es 201', function () {
+          pm.response.to.have.status(201);
+      });
+
+      pm.test('Estado PROGRAMADA', function () {
+          pm.expect(pm.response.json().estado).to.eql('PROGRAMADA');
+      });
+    language: text/javascript
+order: 3000

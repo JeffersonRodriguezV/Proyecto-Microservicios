@@ -1,0 +1,4 @@
+$kind: collection
+description: "Pruebas del Reto 4 sobre el sistema integrado. Todo entra por el Gateway (http://localhost:8080). Cubre vacaciones (creacion + 4 validaciones) y el flujo asincronico: perfil creado por evento y notificaciones. Se puede repetir: genera departamento, email y fechas nuevos en cada corrida. Ejecutar con el Collection Runner, en orden."
+variables:
+  empleadoIdVacaciones: ""

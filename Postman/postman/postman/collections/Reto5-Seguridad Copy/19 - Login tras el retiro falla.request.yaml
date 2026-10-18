@@ -1,0 +1,21 @@
+$kind: http-request
+url: ""
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: '{"email": "{{userEmail}}", "password": "Clave.Nueva2026!"}'
+auth:
+  type: noauth
+scripts:
+  - type: beforeRequest
+    code: setTimeout(function () {}, 4000);
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('Login rechazado (401 o 403)', function () {
+          pm.expect([401, 403]).to.include(pm.response.code);
+      });
+    language: text/javascript
+order: 20000

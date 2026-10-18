@@ -1,0 +1,27 @@
+$kind: http-request
+url: http://localhost:8080/empleados
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"nombre\": \"Juan\",\r
+
+    \  \"apellido\": \"Pérez\",\r
+
+    \  \"email\": \"juan.perez@empresa.com\",\r
+
+    \  \"numeroEmpleado\": \"EMP-2026-001\",\r
+
+    \  \"cargo\": \"Desarrollador Senior\",\r
+
+    \  \"area\": \"Tecnología\",\r
+
+    \  \"departamentoId\": \"IT\",\r
+
+    \  \"fechaIngreso\": \"2026-02-10\",\r
+
+    \  \"estado\": \"ACTIVO\"\r
+
+    }"
+order: 1000

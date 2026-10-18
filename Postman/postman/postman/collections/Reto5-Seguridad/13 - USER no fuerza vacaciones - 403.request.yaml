@@ -1,0 +1,16 @@
+$kind: http-request
+name: 13 - USER no fuerza vacaciones -> 403
+url: "{{baseUrl}}/vacaciones/V-1/forzar-inicio"
+method: POST
+auth:
+  type: bearer
+  credentials:
+    token: "{{tokenUser}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status 403', function () {
+          pm.response.to.have.status(403);
+      });
+    language: text/javascript
+order: 14000

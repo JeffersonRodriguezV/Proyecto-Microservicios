@@ -1,0 +1,18 @@
+$kind: http-request
+url: http://localhost:8081/departamentos/NO-EXISTE
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code es 404', function () {
+          pm.response.to.have.status(404);
+      });
+
+      pm.test('El body tiene el formato uniforme de error', function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData).to.have.property('status');
+          pm.expect(jsonData).to.have.property('mensaje');
+          pm.expect(jsonData).to.have.property('timestamp');
+      });
+    language: text/javascript
+order: 3000

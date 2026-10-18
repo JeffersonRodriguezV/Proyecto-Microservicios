@@ -1,0 +1,16 @@
+$kind: collection
+description: "Flujo de seguridad del Reto 5 sobre el Gateway (http://localhost:8080): 401 sin token o alterado, RBAC (ADMIN/USER), propiedad del recurso, onboarding con token de activacion, cambio y recuperacion de contrasena, y offboarding. Ejecutar con el Collection Runner, en orden. Repetible: genera datos nuevos en cada corrida."
+variables:
+  baseUrl: http://localhost:8080
+  tokenAdmin: ""
+  tokenUser: ""
+  tokenActivacion: ""
+  rnd: ""
+  empleadoId: ""
+  userEmail: ""
+auth:
+  - id: adbf7295-6736-45f1-beed-4af31b45688f
+    type: bearer
+    name: bearer auth
+    credentials:
+      token: "{{tokenAdmin}}"

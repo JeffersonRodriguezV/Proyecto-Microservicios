@@ -1,0 +1,28 @@
+$kind: http-request
+url: http://localhost:8080/empleados
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "nombre": "Marta",
+      "apellido": "Rojas",
+      "email": "marta.{{sufijo}}@empresa.com",
+      "numeroEmpleado": "EMP-R4-{{sufijo}}",
+      "cargo": "Analista Financiera",
+      "area": "Finanzas",
+      "departamentoId": "{{deptId}}",
+      "fechaIngreso": "2026-03-01"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code es 200', function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.collectionVariables.set('empleadoIdVacaciones', String(pm.response.json().id));
+    language: text/javascript
+order: 2000

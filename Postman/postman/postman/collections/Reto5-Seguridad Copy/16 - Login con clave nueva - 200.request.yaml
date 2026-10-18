@@ -1,0 +1,19 @@
+$kind: http-request
+name: 16 - Login con clave nueva -> 200
+url: ""
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: '{"email": "{{userEmail}}", "password": "Clave.Nueva2026!"}'
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status 200', function () {
+          pm.response.to.have.status(200);
+      });
+    language: text/javascript
+order: 17000

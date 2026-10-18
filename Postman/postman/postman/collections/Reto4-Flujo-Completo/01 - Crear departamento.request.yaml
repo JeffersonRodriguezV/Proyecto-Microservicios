@@ -1,0 +1,39 @@
+$kind: http-request
+url: http://localhost:8080/departamentos
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "id": "{{deptId}}",
+      "nombre": "Finanzas",
+      "descripcion": "Departamento de Finanzas"
+    }
+scripts:
+  - type: beforeRequest
+    code: |-
+      // Genera datos unicos para que la coleccion se pueda repetir sin chocar con duplicados
+      function fmt(d) { return d.toISOString().split('T')[0]; }
+      function enDias(n) { const d = new Date(); d.setUTCDate(d.getUTCDate() + n); return fmt(d); }
+
+      const sufijo = Date.now().toString();
+      pm.collectionVariables.set('sufijo', sufijo);
+      pm.collectionVariables.set('deptId', 'D' + sufijo.slice(-6));
+
+      // Fechas relativas a hoy: siempre son futuras, sin importar cuando se corra
+      pm.collectionVariables.set('fechaInicio', enDias(60));
+      pm.collectionVariables.set('fechaFin', enDias(74));
+      pm.collectionVariables.set('fechaSolapeInicio', enDias(69));
+      pm.collectionVariables.set('fechaSolapeFin', enDias(79));
+      pm.collectionVariables.set('fechaFuturaInicio', enDias(200));
+      pm.collectionVariables.set('fechaFuturaFin', enDias(205));
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('Status code es 201', function () {
+          pm.response.to.have.status(201);
+      });
+    language: text/javascript
+order: 1000

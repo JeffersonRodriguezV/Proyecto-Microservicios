@@ -1,0 +1,17 @@
+$kind: http-request
+url: http://localhost:8080/empleados
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code es 200', function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test('Devuelve un arreglo con al menos 1 empleado', function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData).to.be.an('array');
+          pm.expect(jsonData.length).to.be.at.least(1);
+      });
+    language: text/javascript
+order: 10000

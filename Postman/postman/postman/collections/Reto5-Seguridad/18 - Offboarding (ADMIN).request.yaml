@@ -1,0 +1,11 @@
+$kind: http-request
+url: "{{baseUrl}}/empleados/{{empleadoId}}"
+method: DELETE
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Retiro 200 o 204', function () {
+          pm.expect([200, 204]).to.include(pm.response.code);
+      });
+    language: text/javascript
+order: 19000

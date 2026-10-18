@@ -1,0 +1,21 @@
+$kind: http-request
+name: "20 - Auditoria: RETIRADO con fechaRetiro"
+url: "{{baseUrl}}/empleados?estado=RETIRADO"
+method: GET
+queryParams:
+  estado: RETIRADO
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status 200', function () {
+          pm.response.to.have.status(200);
+      });
+      var id = pm.collectionVariables.get('empleadoId');
+      var e = pm.response.json().find(function (x) { return String(x.id) === id; });
+      pm.test('Aparece RETIRADO con fechaRetiro', function () {
+          pm.expect(e).to.exist;
+          pm.expect(e.estado).to.eql('RETIRADO');
+          pm.expect(e.fechaRetiro).to.be.a('string');
+      });
+    language: text/javascript
+order: 21000

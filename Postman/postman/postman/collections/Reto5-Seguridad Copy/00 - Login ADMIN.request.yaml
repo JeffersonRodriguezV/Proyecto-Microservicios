@@ -1,0 +1,23 @@
+$kind: http-request
+url: ""
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: '{"email": "admin@empresa.com", "password": "Admin123!"}'
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status 200', function () {
+          pm.response.to.have.status(200);
+      });
+      var j = pm.response.json();
+      pm.test('Devuelve accessToken', function () {
+          pm.expect(j.accessToken).to.be.a('string');
+      });
+      pm.collectionVariables.set('tokenAdmin', j.accessToken);
+    language: text/javascript
+order: 1000

@@ -1,0 +1,19 @@
+$kind: http-request
+name: 15 - Login con clave antigua -> 401
+url: ""
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: '{"email": "{{userEmail}}", "password": "Clave.Segura2026!"}'
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status 401', function () {
+          pm.response.to.have.status(401);
+      });
+    language: text/javascript
+order: 16000

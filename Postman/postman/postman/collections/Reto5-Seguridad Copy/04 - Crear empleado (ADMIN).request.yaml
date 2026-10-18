@@ -1,0 +1,22 @@
+$kind: http-request
+url: ""
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: '{"nombre": "Pedro", "apellido": "Prueba", "email": "pedro{{rnd}}@empresa.com", "numeroEmpleado": "EMP-{{rnd}}", "cargo": "QA", "area": "IT", "departamentoId": "D{{rnd}}", "fechaIngreso": "2026-03-01"}'
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status 200', function () {
+          pm.response.to.have.status(200);
+      });
+      var j = pm.response.json();
+      pm.test('Empleado ACTIVO', function () {
+          pm.expect(j.estado).to.eql('ACTIVO');
+      });
+      pm.collectionVariables.set('empleadoId', String(j.id));
+      pm.collectionVariables.set('userEmail', j.email);
+    language: text/javascript
+order: 5000

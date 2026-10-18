@@ -1,0 +1,21 @@
+$kind: http-request
+name: 11 - USER edita perfil ajeno -> 403
+url: ""
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: '{"ciudad": "Bogota"}'
+auth:
+  type: bearer
+  credentials:
+    token: "{{tokenUser}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status 403', function () {
+          pm.response.to.have.status(403);
+      });
+    language: text/javascript
+order: 12000

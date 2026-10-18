@@ -1,0 +1,23 @@
+$kind: http-request
+url: "{{baseUrl}}/notificaciones/{{empleadoId}}"
+method: GET
+scripts:
+  - type: beforeRequest
+    code: setTimeout(function () {}, 4000);
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('Status 200', function () {
+          pm.response.to.have.status(200);
+      });
+      var n = pm.response.json().find(function (x) { return x.tipo === 'SEGURIDAD'; });
+      pm.test('Llego la notificacion SEGURIDAD', function () {
+          pm.expect(n).to.exist;
+      });
+      var m = n ? /token=([\w\-.]+)/.exec(n.mensaje) : null;
+      pm.test('El mensaje trae el token de activacion', function () {
+          pm.expect(m).to.not.be.null;
+      });
+      if (m) { pm.collectionVariables.set('tokenActivacion', m[1]); }
+    language: text/javascript
+order: 6000
