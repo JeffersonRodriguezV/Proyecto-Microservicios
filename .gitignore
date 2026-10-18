@@ -12,3 +12,19 @@ notepad .gitignore
 docker-compose.override.yml
 dev-env.ps1
 target/
+
+# Reportes de pruebas
+**/reports/
+e2e-tests/reports/
+**/target/
+**/coverage/
+perfiles-service.Tests/TestResults/
+
+# Credenciales locales
+.env
+e2e-tests/.env
+
+# Node / .NET
+**/node_modules/
+**/bin/
+**/obj/

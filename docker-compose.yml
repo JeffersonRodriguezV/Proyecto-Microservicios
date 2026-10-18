@@ -115,6 +115,7 @@ services:
     networks:
       - microservices-network
     restart: unless-stopped
+
   # ========================
   # BASE DE DATOS: AUTH (MySQL)
   # ========================
@@ -129,8 +130,6 @@ services:
     volumes:
       - db-auth-data:/var/lib/mysql
       - ./auth-service/database:/docker-entrypoint-initdb.d:ro
-
-
     healthcheck:
       test: [ "CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent" ]
       interval: 10s
@@ -291,10 +290,8 @@ services:
       context: ./auth-service
     container_name: auth-service
     restart: unless-stopped
-
     expose:
       - "8086"    # solo visible dentro de la red; el Gateway lo alcanza como http://auth-service:8086
-
     environment:
       DB_URL: jdbc:mysql://db-auth:3306/auth_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       DB_USERNAME: auth_user
@@ -308,20 +305,38 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin123!}
       SEED_USER_EMAIL: ${SEED_USER_EMAIL:-user@empresa.com}
       SEED_USER_PASSWORD: ${SEED_USER_PASSWORD:-User123!}
-
     depends_on:
       db-auth:
         condition: service_healthy
       message-broker:
         condition: service_healthy
-
     healthcheck:
       test: [ "CMD-SHELL", "wget -qO- http://localhost:8086/actuator/health || exit 1" ]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 40s
+    networks:
+      - microservices-network
 
+  # ==========================================================================
+  # BDD TESTS - solo se ejecuta con el perfil "tests"
+  # ==========================================================================
+  bdd-tests:
+    build: ./e2e-tests
+    container_name: bdd-tests
+    profiles: ["tests"]                 # NO arranca con 'docker compose up'
+    depends_on:
+      api-gateway:
+        condition: service_started
+    environment:
+      BASE_URL: http://api-gateway:8080
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      USER_EMAIL: ${SEED_USER_EMAIL}
+      USER_PASSWORD: ${SEED_USER_PASSWORD}
+    volumes:
+      - ./e2e-tests/reports:/app/reports  # los reportes sobreviven al contenedor
     networks:
       - microservices-network
 
@@ -335,7 +350,8 @@ volumes:
   perfiles-data:                        # SQLite de perfiles
   notificaciones-data:                  # SQLite de notificaciones
   vacaciones-data:                      # SQLite de vacaciones
-  db-auth-data:                        # MySQL de auth
+  db-auth-data:                         # MySQL de auth
+
 # ============================================================================
 # REDES
 # ============================================================================
