@@ -3,6 +3,11 @@ module.exports = {
   default: {
     paths: ['features/**/*.feature'],
     require: ['support/**/*.js', 'step_definitions/**/*.js'],
-    format: ['progress-bar']
+    format: [
+      'progress-bar',
+      'html:reports/cucumber.html',
+      'json:reports/cucumber.json',
+      'junit:reports/junit.xml'
+    ]
   }
 };
