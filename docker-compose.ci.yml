@@ -1,0 +1,91 @@
+services:
+
+  # --- Jenkins: CI/CD, usa docker.sock del host para builds ---
+  jenkins:
+    build:
+      context: ./jenkins
+      dockerfile: Dockerfile
+    container_name: jenkins
+    user: root  # necesario para leer docker.sock
+    restart: unless-stopped
+    ports:
+      - "9090:8080"    # UI web
+      - "50000:50000"  # agentes
+    environment:
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
+      - CASC_JENKINS_CONFIG=/var/jenkins_home/casc_configs
+      - JENKINS_ADMIN_ID=${JENKINS_ADMIN_ID:-admin}
+      - JENKINS_ADMIN_PASSWORD=${JENKINS_ADMIN_PASSWORD:?defina JENKINS_ADMIN_PASSWORD en .env}
+      - SONAR_TOKEN=${SONAR_TOKEN:-pendiente}
+    volumes:
+      - jenkins_data:/var/jenkins_home                    # jobs y plugins
+      - /var/run/docker.sock:/var/run/docker.sock         # docker-in-docker
+      - ./jenkins/casc:/var/jenkins_home/casc_configs:ro  # JCasC
+    networks:
+      - microservices-network
+
+  # --- SonarQube: análisis estático de código ---
+  sonarqube:
+    image: sonarqube:lts-community
+    container_name: sonarqube
+    restart: unless-stopped
+    ports:
+      - "9000:9000"    # UI web
+    environment:
+      - SONAR_JDBC_URL=jdbc:postgresql://sonar-db:5432/sonar
+      - SONAR_JDBC_USERNAME=sonar
+      - SONAR_JDBC_PASSWORD=sonar
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_logs:/opt/sonarqube/logs
+      - sonarqube_extensions:/opt/sonarqube/extensions   # plugins
+    depends_on:
+      sonar-db:
+        condition: service_healthy
+    networks:
+      - microservices-network
+
+  # --- BD dedicada de SonarQube (no se reutiliza la de negocio) ---
+  sonar-db:
+    image: postgres:16-alpine
+    container_name: sonar-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=sonar
+      - POSTGRES_USER=sonar
+      - POSTGRES_PASSWORD=sonar
+    volumes:
+      - sonar_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sonar -d sonar"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - microservices-network
+
+  # --- Registry: almacén privado de imágenes Docker ---
+  registry:
+    image: registry:2
+    container_name: docker-registry
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - registry_data:/var/lib/registry   # imágenes publicadas
+    networks:
+      - microservices-network
+
+# --- Red compartida: los 3 servicios se resuelven por nombre ---
+networks:
+  microservices-network:
+    driver: bridge
+
+# --- Volúmenes: persisten entre "compose down" (se borran con "down -v") ---
+volumes:
+  jenkins_data:
+  sonar_db_data:
+  sonarqube_data:
+  sonarqube_logs:
+  sonarqube_extensions:
+  registry_data:

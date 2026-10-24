@@ -1,0 +1,25 @@
+jobs:
+  - script: |
+      pipelineJob('verification-docker') {
+        description('Comprueba que Jenkins puede usar Docker')
+        definition {
+          cps {
+            sandbox(true)
+            script('''
+              pipeline {
+                agent any
+                stages {
+                  stage('Verification') {
+                    steps {
+                      echo 'Jenkins está correctamente configurado'
+                      sh 'docker --version'
+                      sh 'docker compose version'
+                      sh 'docker ps'
+                    }
+                  }
+                }
+              }
+            ''')
+          }
+        }
+      }
