@@ -1,0 +1,21 @@
+# Override solo para el pipeline E2E en Jenkins.
+# Reemplaza los bind mounts de scripts SQL (que no existen en el host) por volumenes
+# que el pipeline llena antes de levantar el sistema.
+services:
+  db-auth:
+    volumes:
+      - e2e_init_auth:/docker-entrypoint-initdb.d:ro
+  db-empleados:
+    volumes:
+      - e2e_init_empleados:/docker-entrypoint-initdb.d:ro
+  db-departamentos:
+    volumes:
+      - e2e_init_departamentos:/docker-entrypoint-initdb.d:ro
+
+volumes:
+  e2e_init_auth:
+    external: true
+  e2e_init_empleados:
+    external: true
+  e2e_init_departamentos:
+    external: true

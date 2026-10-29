@@ -1,6 +1,9 @@
 pipeline {
     agent any
     options { timeout(time: 30, unit: 'MINUTES') }
+    environment {
+        COMPOSE = 'docker compose -f docker-compose.yml -f docker-compose.e2e.yml'
+    }
 
     stages {
         stage('E2E Tests') {
@@ -10,8 +13,19 @@ pipeline {
                     sh '''
                         cp "$ENV_SISTEMA" .env
                         cp "$ENV_E2E" e2e-tests/.env
-                        docker compose -f docker-compose.yml down -v || true
-                        docker compose -f docker-compose.yml up -d --build
+
+                        # Copiar los scripts SQL a volumenes (el Docker del host no ve este workspace)
+                        for s in auth empleados departamentos; do
+                          docker volume rm -f e2e_init_$s >/dev/null 2>&1 || true
+                          docker volume create e2e_init_$s >/dev/null
+                          docker rm -f init_$s >/dev/null 2>&1 || true
+                          docker create --name init_$s -v e2e_init_$s:/dst alpine:3.20 >/dev/null
+                          docker cp ${s}-service/database/. init_$s:/dst
+                          docker rm init_$s >/dev/null
+                        done
+
+                        $COMPOSE down -v || true
+                        $COMPOSE up -d --build
                         bash scripts/wait-for-healthy.sh http://host.docker.internal:8080 240
                     '''
                 }
@@ -38,10 +52,13 @@ pipeline {
                     publishHTML(target: [reportDir: 'e2e-tests/reports', reportFiles: 'cucumber.html',
                                          reportName: 'Reporte BDD', keepAll: true,
                                          alwaysLinkToLastBuild: true, allowMissing: true])
-                    sh 'docker compose -f docker-compose.yml logs --no-color > docker-logs.txt || true'
+                    sh '$COMPOSE logs --no-color > docker-logs.txt || true'
                     archiveArtifacts artifacts: 'docker-logs.txt', allowEmptyArchive: true
-                    sh 'docker compose -f docker-compose.yml down -v || true'
-                    sh 'rm -f .env e2e-tests/.env'
+                    sh '''
+                        $COMPOSE down -v || true
+                        docker volume rm -f e2e_init_auth e2e_init_empleados e2e_init_departamentos || true
+                        rm -f .env e2e-tests/.env
+                    '''
                 }
             }
         }
