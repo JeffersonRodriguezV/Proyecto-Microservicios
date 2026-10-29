@@ -1,0 +1,49 @@
+pipeline {
+    agent any
+    options { timeout(time: 30, unit: 'MINUTES') }
+
+    stages {
+        stage('E2E Tests') {
+            steps {
+                withCredentials([file(credentialsId: 'env-sistema', variable: 'ENV_SISTEMA'),
+                                 file(credentialsId: 'env-e2e',     variable: 'ENV_E2E')]) {
+                    sh '''
+                        cp "$ENV_SISTEMA" .env
+                        cp "$ENV_E2E" e2e-tests/.env
+                        docker compose -f docker-compose.yml down -v || true
+                        docker compose -f docker-compose.yml up -d --build
+                        bash scripts/wait-for-healthy.sh http://host.docker.internal:8080 240
+                    '''
+                }
+                script {
+                    docker.image('node:22').inside('--add-host=host.docker.internal:host-gateway') {
+                        sh '''
+                            cd e2e-tests
+                            npm ci
+                            BASE_URL=http://host.docker.internal:8080 npx cucumber-js || true
+                        '''
+                    }
+                }
+            }
+            post {
+                always {
+                    junit testResults: 'e2e-tests/reports/junit.xml', allowEmptyResults: true
+                    script {
+                        if (fileExists('e2e-tests/reports/cucumber.json')) {
+                            cucumber(jsonReportDirectory: 'e2e-tests/reports',
+                                     fileIncludePattern: '**/cucumber.json',
+                                     buildStatus: 'UNSTABLE')
+                        }
+                    }
+                    publishHTML(target: [reportDir: 'e2e-tests/reports', reportFiles: 'cucumber.html',
+                                         reportName: 'Reporte BDD', keepAll: true,
+                                         alwaysLinkToLastBuild: true, allowMissing: true])
+                    sh 'docker compose -f docker-compose.yml logs --no-color > docker-logs.txt || true'
+                    archiveArtifacts artifacts: 'docker-logs.txt', allowEmptyArchive: true
+                    sh 'docker compose -f docker-compose.yml down -v || true'
+                    sh 'rm -f .env e2e-tests/.env'
+                }
+            }
+        }
+    }
+}
