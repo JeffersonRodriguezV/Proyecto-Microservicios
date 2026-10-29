@@ -11,7 +11,7 @@ Característica: Vacaciones de un empleado
     Cuando programo vacaciones del día 10 al día 15 contando desde hoy
     Entonces la respuesta debe tener código 201
     Y el período de vacaciones debe estar en estado "PROGRAMADA"
-    Y eventualmente el empleado debe tener una notificación que contenga "falso"
+    Y eventualmente el empleado debe tener una notificación que contenga "han sido confirmadas"
 
   Esquema del escenario: Se rechazan las fechas inválidas
     Dado que se registra un empleado nuevo con datos únicos
