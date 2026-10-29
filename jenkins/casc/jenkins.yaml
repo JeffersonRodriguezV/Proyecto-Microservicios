@@ -10,21 +10,23 @@ jenkins:
   authorizationStrategy:
     loggedInUsersCanDoAnything:
       allowAnonymousRead: false
-  unclassified:
-    location:
-      url: "http://localhost:9090/"
-    sonarGlobalConfiguration:
-      buildWrapperEnabled: true
-      installations:
-        - name: "sonarqube"
-          serverUrl: "http://sonarqube:9000"
-          credentialsId: "sonar-token"
-    credentials:
-      system:
-        domainCredentials:
-          - credentials:
-              - string:
-                  scope: GLOBAL
-                  id: "sonar-token"
-                  description: "Token de análisis de SonarQube"
-                  secret: "${SONAR_TOKEN:-pendiente}"
+
+unclassified:
+  location:
+    url: "http://localhost:9090/"
+  sonarGlobalConfiguration:
+    buildWrapperEnabled: true
+    installations:
+      - name: "sonarqube"
+        serverUrl: "http://sonarqube:9000"
+        credentialsId: "sonar-token"
+
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+          - string:
+              scope: GLOBAL
+              id: "sonar-token"
+              description: "Token de analisis de SonarQube"
+              secret: "${SONAR_TOKEN:-pendiente}"
