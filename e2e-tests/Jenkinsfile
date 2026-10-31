@@ -1,12 +1,16 @@
 pipeline {
     agent any
-    options { timeout(time: 30, unit: 'MINUTES') }
+    options {
+        timeout(time: 30, unit: 'MINUTES')
+        disableConcurrentBuilds()
+    }
     environment {
         COMPOSE = 'docker compose -f docker-compose.yml -f docker-compose.e2e.yml'
     }
 
     stages {
         stage('E2E Tests') {
+            options { lock('e2e-sistema') }
             steps {
                 withCredentials([file(credentialsId: 'env-sistema', variable: 'ENV_SISTEMA'),
                                  file(credentialsId: 'env-e2e',     variable: 'ENV_E2E')]) {
