@@ -58,5 +58,32 @@ pipeline {
                 }
             }
         }
+
+        // Construye la imagen del servicio y la publica en el registry local.
+        // Solo corre si todo lo anterior salio SUCCESS (no se publica con tests rotos).
+        stage('Package & Publish') {
+            when { expression { currentBuild.currentResult == 'SUCCESS' } }
+            agent any
+            environment {
+                // El daemon Docker es el del host, por eso 'localhost:5000' es el registry publicado.
+                IMAGE = 'localhost:5000/microservicios/empleados-service'
+            }
+            steps {
+                checkout scm
+                dir('empleados-service') {
+                    sh 'docker build -t $IMAGE:$BUILD_NUMBER -t $IMAGE:latest .'
+                }
+                sh 'docker push $IMAGE:$BUILD_NUMBER'
+                sh 'docker push $IMAGE:latest'
+            }
+            post {
+                always {
+                    sh 'docker rmi $IMAGE:$BUILD_NUMBER $IMAGE:latest || true'
+                }
+                success {
+                    echo "Imagen publicada: ${IMAGE}:${BUILD_NUMBER}"
+                }
+            }
+        }
     }
 }
