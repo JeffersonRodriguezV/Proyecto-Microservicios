@@ -1,0 +1,61 @@
+// Pipeline CI de empleados-service (Java 21 / Spring Boot / Maven)
+// Etapas actuales: Checkout -> Build -> Test (con cobertura JaCoCo).
+// Siguientes (Reto 7): SonarQube + Quality Gate, Package/Publish, E2E.
+pipeline {
+    // Cada stage declara su propio agente (el E2E necesitara Docker en el host).
+    agent none
+
+    options {
+        timeout(time: 30, unit: 'MINUTES')
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+
+    stages {
+        stage('Checkout') {
+            agent any
+            steps {
+                checkout scm
+                // Se guarda el workspace para que los agentes Maven lo reutilicen sin repetir el clone.
+                stash name: 'src', includes: 'empleados-service/**'
+            }
+        }
+
+        // Agente Maven con cache de ~/.m2 y docker.sock (por si los tests usan Testcontainers).
+        stage('Build & Test') {
+            agent {
+                docker {
+                    image 'maven:3.9-eclipse-temurin-21'
+                    args '-u root -v maven_cache:/root/.m2 -v /var/run/docker.sock:/var/run/docker.sock ' +
+                         '--add-host=host.docker.internal:host-gateway'
+                }
+            }
+            environment {
+                TESTCONTAINERS_HOST_OVERRIDE = 'host.docker.internal'
+            }
+            steps {
+                unstash 'src'
+                dir('empleados-service') {
+                    // Compilar: si falla, el build termina en FAILURE.
+                    sh 'mvn -B -q clean compile -DskipTests'
+
+                    // Tests + JaCoCo. Los tests fallidos NO rompen aqui: marcan UNSTABLE.
+                    // (mvn verify aplica ademas el minimo de 70% de cobertura definido en el pom)
+                    sh 'mvn -B verify -Dmaven.test.failure.ignore=true'
+                }
+            }
+            post {
+                always {
+                    junit testResults: 'empleados-service/target/surefire-reports/*.xml, empleados-service/target/failsafe-reports/*.xml',
+                          allowEmptyResults: true
+                    recordCoverage(
+                        tools: [[parser: 'JACOCO', pattern: 'empleados-service/target/site/jacoco/jacoco.xml']],
+                        sourceCodeRetention: 'LAST_BUILD'
+                    )
+                    // Devolver el workspace al usuario jenkins para que pueda limpiarlo.
+                    sh 'chown -R 1000:1000 empleados-service/target || true'
+                }
+            }
+        }
+    }
+}
