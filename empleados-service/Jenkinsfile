@@ -26,8 +26,11 @@ pipeline {
             agent {
                 docker {
                     image 'maven:3.9-eclipse-temurin-21'
+                    // --network: para que el agente alcance a SonarQube por su nombre ('sonarqube').
+                    // El nombre depende de la carpeta del proyecto (docker compose <carpeta>_microservices-network).
                     args '-u root -v maven_cache:/root/.m2 -v /var/run/docker.sock:/var/run/docker.sock ' +
-                         '--add-host=host.docker.internal:host-gateway'
+                         '--add-host=host.docker.internal:host-gateway ' +
+                         '--network proyecto-microservicios_microservices-network'
                 }
             }
             environment {
@@ -42,6 +45,14 @@ pipeline {
                     // Tests + JaCoCo. Los tests fallidos NO rompen aqui: marcan UNSTABLE.
                     // (mvn verify aplica ademas el minimo de 70% de cobertura definido en el pom)
                     sh 'mvn -B verify -Dmaven.test.failure.ignore=true'
+
+                    // Analisis estatico + cobertura hacia SonarQube.
+                    // withSonarQubeEnv inyecta SONAR_HOST_URL y el token (credencial 'sonar-token').
+                    withSonarQubeEnv('sonarqube') {
+                        sh '''mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+                              -Dsonar.projectKey=empleados-service \
+                              -Dsonar.projectName=empleados-service'''
+                    }
                 }
             }
             post {
@@ -55,6 +66,16 @@ pipeline {
                     )
                     // Devolver el workspace al usuario jenkins para que pueda limpiarlo.
                     sh 'chown -R 1000:1000 empleados-service/target || true'
+                }
+            }
+        }
+
+        // Espera el veredicto de SonarQube (llega por el webhook). Si el gate falla, FAILURE.
+        stage('Quality Gate') {
+            agent any
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
                 }
             }
         }
