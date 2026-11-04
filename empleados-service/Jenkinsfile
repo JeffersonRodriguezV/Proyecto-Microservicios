@@ -50,6 +50,7 @@ pipeline {
                           allowEmptyResults: true
                     recordCoverage(
                         tools: [[parser: 'JACOCO', pattern: 'empleados-service/target/site/jacoco/jacoco.xml']],
+                        sourceDirectories: [[path: 'empleados-service/src/main/java']],
                         sourceCodeRetention: 'LAST_BUILD'
                     )
                     // Devolver el workspace al usuario jenkins para que pueda limpiarlo.
