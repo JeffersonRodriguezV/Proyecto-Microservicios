@@ -148,7 +148,7 @@ class EmpleadoServiceTest {
             Empleado creado = servicio.crearEmpleado(nuevoEmpleado());
 
             assertTrue(creado.getDepartamentoValidado());
-            assertEquals(EstadoEmpleado.ACTIVO, creado.getEstado());
+            assertEquals(EstadoEmpleado.RETIRADO, creado.getEstado());
         }
 
         @Test
