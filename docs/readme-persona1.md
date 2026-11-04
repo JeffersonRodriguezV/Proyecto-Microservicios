@@ -77,6 +77,7 @@ Package & Publish solo se ejecuta si el build llega en SUCCESS: no se publica un
 | #5 | SUCCESS | Pipeline completo: SonarQube, Quality Gate y Package publicado (`:5` y `latest`) |
 | #6 | ABORTED | Timeout en Build & Test: el motor de Docker se quedo sin memoria en el equipo. No es un fallo del pipeline |
 | #7 | UNSTABLE | Fallo simulado (ver abajo) |
+| #8 | SUCCESS | Tras revertir el fallo simulado: el pipeline vuelve a verde |
 
 ## Fallo simulado
 
