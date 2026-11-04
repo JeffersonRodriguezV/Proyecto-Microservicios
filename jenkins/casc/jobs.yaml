@@ -1,0 +1,20 @@
+# Jobs de CI definidos como codigo (JCasC + Job DSL).
+# Cada servicio tiene su propio pipeline, cuyo Jenkinsfile vive en el repo.
+# Si Jenkins se recrea desde cero, estos jobs reaparecen solos.
+jobs:
+  - script: |
+      pipelineJob('empleados-service') {
+        description('CI de empleados-service (Java 21 / Spring Boot / Maven)')
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote { url('https://github.com/JeffersonRodriguezV/Proyecto-Microservicios.git') }
+                branch('*/main')
+              }
+            }
+            scriptPath('empleados-service/Jenkinsfile')
+            lightweight(true)
+          }
+        }
+      }
