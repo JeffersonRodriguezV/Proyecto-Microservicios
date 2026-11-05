@@ -92,5 +92,26 @@ pipeline {
                 }
             }
         }
+        stage('Package & Publish') {
+            when { expression { currentBuild.currentResult == 'SUCCESS' } }
+            agent any
+            environment {
+                IMAGEN = 'localhost:5000/microservicios/vacaciones-service'
+            }
+            steps {
+                checkout scm
+                // El contexto de build es la carpeta del servicio (ahí están Dockerfile y package.json)
+                sh 'docker build -t $IMAGEN:$BUILD_NUMBER -t $IMAGEN:latest vacaciones-service'
+                sh 'docker push $IMAGEN:$BUILD_NUMBER'
+                sh 'docker push $IMAGEN:latest'
+            }
+            post {
+                always {
+                    // Libera espacio en el disco del runner (importante con 8 GB de RAM y disco justo)
+                    sh 'docker rmi $IMAGEN:$BUILD_NUMBER $IMAGEN:latest || true'
+                }
+            }
+        }
+
     }
 }
