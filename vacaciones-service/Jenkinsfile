@@ -46,7 +46,7 @@ pipeline {
                     junit testResults: 'vacaciones-service/reports/junit.xml', allowEmptyResults: true
                     recordCoverage(
                         tools: [[parser: 'LCOV', pattern: 'vacaciones-service/reports/lcov.info']],
-                        sourceDirectories: [[path: 'vacaciones-service/src']],
+                        sourceDirectories: [[path: 'vacaciones-service']],
                         sourceCodeRetention: 'LAST_BUILD'
                     )
                     sh 'chown -R 1000:1000 vacaciones-service || true'
