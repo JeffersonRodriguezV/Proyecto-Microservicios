@@ -12,10 +12,15 @@ services:
     volumes:
       - e2e_init_departamentos:/docker-entrypoint-initdb.d:ro
   message-broker:
-    environment:
-      # Fija la cookie de Erlang al arrancar: evita que el healthcheck (root) la cree
-      # antes que el broker y la deje ilegible para el usuario rabbitmq (error eacces).
-      RABBITMQ_ERLANG_COOKIE: cookie-solo-para-e2e
+    healthcheck:
+      # El healthcheck original ejecuta rabbitmq-diagnostics como root. Si corre antes de que el
+      # broker cree su cookie de Erlang, la crea root con permisos 400 y el broker arranca con
+      # eacces. Una prueba TCP al puerto AMQP no toca la cookie y comprueba lo mismo.
+      test: [ "CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/5672" ]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 60s
 
 volumes:
   e2e_init_auth:
