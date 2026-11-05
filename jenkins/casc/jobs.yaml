@@ -18,3 +18,19 @@ jobs:
           }
         }
       }
+  - script: |
+        pipelineJob('vacaciones-service') {
+          description('CI de vacaciones-service (Node 22 / SQLite)')
+          definition {
+            cpsScm {
+              scm {
+                git {
+                  remote { url('https://github.com/JeffersonRodriguezV/Proyecto-Microservicios.git') }
+                  branch('*/main')
+                }
+              }
+              scriptPath('vacaciones-service/Jenkinsfile')
+              lightweight(true)
+            }
+          }
+        }
