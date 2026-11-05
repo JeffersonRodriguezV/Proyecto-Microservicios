@@ -79,3 +79,10 @@ Sonar cuenta **todos** los archivos de `src`, y Node solo informa de los que los
 puede dar un valor más bajo que Jenkins. Se excluyen de la cobertura únicamente archivos sin lógica de negocio propia
 (arranque, documentación OpenAPI, utilidades de desarrollo) y los adaptadores de infraestructura que se validan en el E2E
 (publicador de eventos, cliente HTTP). Las exclusiones viven en `sonar.coverage.exclusions` y se justifican en el README de cada servicio.
+
+## 9. Healthcheck del broker en el E2E
+
+`docker-compose.e2e.yml` sustituye el healthcheck de `message-broker` por una prueba TCP al puerto 5672. El original
+(`rabbitmq-diagnostics`) se ejecuta como root y, si corre antes de que el broker cree su cookie de Erlang, la deja
+ilegible para el usuario `rabbitmq` (`eacces`) y el E2E falla de forma intermitente. La prueba TCP comprueba lo mismo
+sin tocar la cookie. Detalle del diagnóstico en `readme-persona2.md`, sección 6.1.
