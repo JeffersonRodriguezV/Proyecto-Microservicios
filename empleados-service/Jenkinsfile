@@ -55,8 +55,7 @@ pipeline {
 
                     // Analisis estatico + cobertura hacia SonarQube.
                     // withSonarQubeEnv inyecta SONAR_HOST_URL y el token (credencial 'sonar-token').
-                    // 'params.RUN_SONAR == true': en la 1.a ejecucion tras agregar el parametro
-                    // Jenkins aun no lo conoce (null) y se omite; despues es true por defecto.
+                    // Con RUN_SONAR=false (Build with Parameters) se omite el analisis.
                     script {
                         if (params.RUN_SONAR == true) {
                             withSonarQubeEnv('sonarqube') {

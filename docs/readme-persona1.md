@@ -15,7 +15,7 @@ Pipeline de integracion continua de `empleados-service` (Java 21, Spring Boot, M
 | Analisis SonarQube | `sonar-maven-plugin` envia codigo y cobertura al proyecto `empleados-service` | FAILURE |
 | Quality Gate | Espera el veredicto de SonarQube (`cobertura-70`) por webhook | FAILURE (aborta el pipeline) |
 | Package & Publish | Construye la imagen Docker y la publica en el registry local | FAILURE |
-| E2E | _pendiente_ | UNSTABLE |
+| E2E | Levanta el sistema completo con `docker compose` y ejecuta la suite BDD del Reto 6 (Cucumber.js). Cleanup con `down -v` | Escenarios fallidos: UNSTABLE |
 
 Package & Publish solo se ejecuta si el build llega en SUCCESS: no se publica una imagen de un build con pruebas rotas.
 
@@ -27,6 +27,9 @@ Package & Publish solo se ejecuta si el build llega en SUCCESS: no se publica un
 | Build & Test | Cobertura JaCoCo, con codigo fuente coloreado | `recordCoverage` (parser JACOCO) | Build -> **Coverage Report** |
 | Analisis SonarQube | Calidad, bugs, cobertura y estado del Quality Gate | `withSonarQubeEnv` + `waitForQualityGate` | SonarQube `localhost:9000` -> proyecto `empleados-service` |
 | Package & Publish | Imagen `localhost:5000/microservicios/empleados-service:<build>` y `latest` | `docker push` | `curl http://localhost:5000/v2/microservicios/empleados-service/tags/list` |
+| E2E | Resultados de escenarios (JUnit XML) | `junit` | Build -> **Test Result** |
+| E2E | Reporte BDD navegable, con features y escenarios en espanol | `cucumber` | Menu del job -> **Cucumber reports** (build -> Cucumber reports) |
+| E2E | Logs de todos los contenedores del sistema | `archiveArtifacts` (`docker-logs.txt`) | Build -> **Artifacts** |
 
 ## Como interpretar los resultados
 
@@ -47,6 +50,8 @@ Package & Publish solo se ejecuta si el build llega en SUCCESS: no se publica un
 - **Tests rotos = UNSTABLE** (`-Dmaven.test.failure.ignore=true`): el fallo queda visible en el reporte y no solo en el log.
 - **Quality Gate `cobertura-70`**: Coverage menor a 70% en New Code y en Overall Code. Se asigna directamente al proyecto.
 - **`disableConcurrentBuilds()` y timeout de 30 min** para no pisar el workspace y evitar builds colgados.
+- **Parametro `RUN_SONAR`** (por defecto `true`): permite ejecutar el pipeline sin SonarQube. Se agrego porque en un equipo de 8 GB de RAM no caben a la vez SonarQube y el E2E (12 contenedores). Con el valor por defecto el analisis y el Quality Gate siempre corren; el build #16 se ejecuto con `RUN_SONAR=false`, y los builds #5 y #8 con Sonar completo.
+- **Etapa E2E bajo `lock('e2e-sistema')`** y con scripts SQL cargados en volumenes: el Docker del host no ve el workspace de Jenkins, por eso no se usan bind mounts relativos.
 - **Secretos fuera del repo**: el token de SonarQube vive en el `.env` (ignorado por git) y llega a Jenkins como credencial `sonar-token`.
 
 ## Resultados
@@ -69,6 +74,14 @@ Package & Publish solo se ejecuta si el build llega en SUCCESS: no se publica un
 
 ![Coverage Report](img/p1-coverage.png)
 
+**Pipeline con E2E (build #16 en verde)**
+
+![Stage View con E2E](img/p1-e2e-stage-view.png)
+
+**Reporte BDD navegable (features y escenarios en espanol)**
+
+![Reporte BDD](img/p1-bdd.png)
+
 ## Ejecuciones
 
 | Build | Resultado | Notas |
@@ -78,6 +91,9 @@ Package & Publish solo se ejecuta si el build llega en SUCCESS: no se publica un
 | #6 | ABORTED | Timeout en Build & Test: el motor de Docker se quedo sin memoria en el equipo. No es un fallo del pipeline |
 | #7 | UNSTABLE | Fallo simulado (ver abajo) |
 | #8 | SUCCESS | Tras revertir el fallo simulado: el pipeline vuelve a verde |
+| #14 | FAILURE | Primer intento con E2E, sin SonarQube levantado: el analisis no encontro `sonarqube:9000`. Se agrego el parametro `RUN_SONAR` |
+| #15 | FAILURE | E2E: el puerto 8080 del equipo estaba ocupado por otra aplicacion; el API Gateway no pudo arrancar |
+| #16 | SUCCESS | Pipeline completo con E2E: 33 escenarios (178 pasos) en verde, imagen `:16` publicada. Se ejecuto con `RUN_SONAR=false` |
 
 ## Fallo simulado
 
@@ -91,7 +107,3 @@ Se cambio a proposito la asercion de `EmpleadoServiceTest.creaConDepartamentoExi
 ![Test Result con la prueba fallida](img/p1-fallo.png)
 
 ![Stage View del build UNSTABLE](img/p1-stage-view-unstable.png)
-
-## Pendiente
-
-- Etapa E2E (BDD sobre el sistema completo) y su reporte.
