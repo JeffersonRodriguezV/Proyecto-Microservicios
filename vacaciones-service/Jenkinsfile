@@ -1,0 +1,57 @@
+// Pipeline CI de vacaciones-service (Node.js 22 / Express / node:test)
+// Etapas actuales: Checkout -> Build & Test (con cobertura).
+// Siguientes (Reto 7): SonarQube + Quality Gate, Package/Publish, E2E.
+pipeline {
+    agent none
+
+    options {
+        timeout(time: 30, unit: 'MINUTES')
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+
+    stages {
+        stage('Checkout') {
+            agent any
+            steps {
+                checkout scm
+                stash name: 'src', includes: 'vacaciones-service/**'
+            }
+        }
+
+        stage('Build & Test') {
+            agent {
+                docker {
+                    image 'node:22'
+                    // cache de npm entre builds; root para poder escribir node_modules
+                    args '-u root -v npm_cache:/root/.npm'
+                }
+            }
+            environment {
+                // El servicio usa node:sqlite, que en Node 22 puede requerir el flag
+                NODE_OPTIONS = '--experimental-sqlite'
+            }
+            steps {
+                unstash 'src'
+                dir('vacaciones-service') {
+                    // Build: instalar dependencias exactas del lock. Si falla, FAILURE.
+                    sh 'npm ci'
+
+                    // Test: los tests fallidos NO rompen aqui; el paso junit marca UNSTABLE.
+                    sh 'npm test || true'
+                }
+            }
+            post {
+                always {
+                    junit testResults: 'vacaciones-service/reports/junit.xml', allowEmptyResults: true
+                    recordCoverage(
+                        tools: [[parser: 'LCOV', pattern: 'vacaciones-service/reports/lcov.info']],
+                        sourceDirectories: [[path: 'vacaciones-service/src']],
+                        sourceCodeRetention: 'LAST_BUILD'
+                    )
+                    sh 'chown -R 1000:1000 vacaciones-service || true'
+                }
+            }
+        }
+    }
+}
