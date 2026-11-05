@@ -139,7 +139,16 @@ pipeline {
                         done
 
                         $COMPOSE down -v || true
-                        $COMPOSE up -d --build
+
+                        # 1) Construir primero las imagenes, sin contenedores corriendo (menos carga)
+                        $COMPOSE build
+
+                        # 2) Levantar la infraestructura y ESPERAR a que este sana
+                        #    (en equipos de 8 GB, arrancar todo a la vez hizo fallar al broker)
+                        $COMPOSE up -d --wait --wait-timeout 240 message-broker db-auth db-empleados db-departamentos
+
+                        # 3) Ahora si, los servicios
+                        $COMPOSE up -d
                         bash scripts/wait-for-healthy.sh http://host.docker.internal:8080 240
                     '''
                 }
