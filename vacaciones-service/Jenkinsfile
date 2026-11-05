@@ -1,8 +1,14 @@
 // Pipeline CI de vacaciones-service (Node.js 22 / Express / node:test)
-// Etapas actuales: Checkout -> Build & Test (con cobertura).
-// Siguientes (Reto 7): SonarQube + Quality Gate, Package/Publish, E2E.
+// Etapas: Checkout -> Build & Test -> SonarQube -> Quality Gate.
+// Siguientes (Reto 7): Package/Publish, E2E.
 pipeline {
     agent none
+
+    // RUN_SONAR=false permite correr el pipeline sin SonarQube (equipos con poca RAM).
+    parameters {
+        booleanParam(name: 'RUN_SONAR', defaultValue: true,
+                     description: 'Ejecutar analisis SonarQube y Quality Gate')
+    }
 
     options {
         timeout(time: 30, unit: 'MINUTES')
@@ -15,7 +21,8 @@ pipeline {
             agent any
             steps {
                 checkout scm
-                stash name: 'src', includes: 'vacaciones-service/**'
+                stash name: 'src', includes: 'vacaciones-service/**',
+                      excludes: 'vacaciones-service/node_modules/**,vacaciones-service/reports/**,vacaciones-service/coverage/**'
             }
         }
 
@@ -23,23 +30,22 @@ pipeline {
             agent {
                 docker {
                     image 'node:22'
-                    // cache de npm entre builds; root para poder escribir node_modules
                     args '-u root -v npm_cache:/root/.npm'
                 }
             }
             environment {
-                // El servicio usa node:sqlite, que en Node 22 puede requerir el flag
                 NODE_OPTIONS = '--experimental-sqlite'
             }
             steps {
                 unstash 'src'
                 dir('vacaciones-service') {
-                    // Build: instalar dependencias exactas del lock. Si falla, FAILURE.
+                    // Build: dependencias exactas del lock. Si falla, FAILURE.
                     sh 'npm ci'
-
-                    // Test: los tests fallidos NO rompen aqui; el paso junit marca UNSTABLE.
+                    // Test: los tests fallidos no rompen aqui; el paso junit marca UNSTABLE.
                     sh 'npm test || true'
                 }
+                // Los reportes (lcov) los necesita el analisis de SonarQube.
+                stash name: 'reportes', includes: 'vacaciones-service/reports/**', allowEmpty: true
             }
             post {
                 always {
@@ -50,6 +56,39 @@ pipeline {
                         sourceCodeRetention: 'LAST_BUILD'
                     )
                     sh 'chown -R 1000:1000 vacaciones-service || true'
+                }
+            }
+        }
+
+        // Analisis estatico + cobertura. Usa sonar-project.properties del servicio.
+        stage('SonarQube') {
+            when { expression { params.RUN_SONAR == true } }
+            agent {
+                docker {
+                    image 'sonarsource/sonar-scanner-cli:5.0.1'
+                    // --network: para alcanzar a SonarQube por su nombre ('sonarqube').
+                    // El nombre depende de la carpeta del proyecto (<carpeta>_microservices-network).
+                    args '-u root --network proyecto-microservicios_microservices-network --entrypoint='
+                }
+            }
+            steps {
+                unstash 'src'
+                unstash 'reportes'
+                dir('vacaciones-service') {
+                    withSonarQubeEnv('sonarqube') {
+                        sh 'sonar-scanner -Dsonar.host.url=$SONAR_HOST_URL -Dsonar.token=$SONAR_AUTH_TOKEN'
+                    }
+                }
+            }
+        }
+
+        // Espera el veredicto de SonarQube (llega por el webhook). Si el gate falla: FAILURE.
+        stage('Quality Gate') {
+            when { expression { params.RUN_SONAR == true } }
+            agent any
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
                 }
             }
         }
