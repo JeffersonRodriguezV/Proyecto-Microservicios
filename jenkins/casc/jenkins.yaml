@@ -30,3 +30,17 @@ credentials:
               id: "sonar-token"
               description: "Token de analisis de SonarQube"
               secret: "${SONAR_TOKEN:-pendiente}"
+          # Credenciales del E2E: se crean desde archivos montados de solo lectura (ver docker-compose.ci.yml).
+          # Los .env no estan en el repositorio; sobreviven a reinicios y a recrear Jenkins.
+          - file:
+              scope: GLOBAL
+              id: "env-sistema"
+              fileName: ".env"
+              description: ".env del sistema"
+              secretBytes: "${readFileBase64:/run/secrets/env-sistema}"
+          - file:
+              scope: GLOBAL
+              id: "env-e2e"
+              fileName: ".env"
+              description: ".env de e2e-tests"
+              secretBytes: "${readFileBase64:/run/secrets/env-e2e}"

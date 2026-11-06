@@ -21,6 +21,10 @@ services:
       - jenkins_data:/var/jenkins_home                    # jobs y plugins
       - /var/run/docker.sock:/var/run/docker.sock         # docker-in-docker
       - ./jenkins/casc:/var/jenkins_home/casc_configs:ro  # JCasC
+      # .env de solo lectura: JCasC los convierte en las credenciales env-sistema y env-e2e (no se suben al repo).
+      # Ambos archivos deben existir antes de levantar (copie .env.example y e2e-tests/.env.example).
+      - ./.env:/run/secrets/env-sistema:ro
+      - ./e2e-tests/.env:/run/secrets/env-e2e:ro
     networks:
       - microservices-network
 
@@ -79,6 +83,8 @@ services:
 # --- Red compartida: los 3 servicios se resuelven por nombre ---
 networks:
   microservices-network:
+    # Nombre fijo: los Jenkinsfile lo usan en "docker run --network", asi que no puede depender de la carpeta.
+    name: proyecto-microservicios_microservices-network
     driver: bridge
 
 # --- Volúmenes: persisten entre "compose down" (se borran con "down -v") ---

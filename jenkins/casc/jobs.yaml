@@ -34,3 +34,19 @@ jobs:
             }
           }
         }
+  - script: |
+      pipelineJob('e2e-bdd') {
+        description('E2E BDD (Cucumber.js): levanta el sistema completo y ejecuta los escenarios en espanol')
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote { url('https://github.com/JeffersonRodriguezV/Proyecto-Microservicios.git') }
+                branch('*/main')
+              }
+            }
+            scriptPath('e2e-tests/Jenkinsfile')
+            lightweight(true)
+          }
+        }
+      }
