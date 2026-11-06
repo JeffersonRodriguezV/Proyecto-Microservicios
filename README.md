@@ -224,6 +224,9 @@ convenciones en [`docs/convencion-ci.md`](docs/convencion-ci.md).
 
 ### Acceso
 - Jenkins: http://localhost:9090 (usuario y clave: `JENKINS_ADMIN_ID` / `JENKINS_ADMIN_PASSWORD` del `.env`).
+  No hay contraseña inicial aleatoria que buscar: el asistente de configuración está desactivado
+  (`runSetupWizard=false`) y el administrador lo crea JCasC con esas dos variables. Los valores por
+  defecto están en `.env.example` (`admin` / `cambie-esta-clave`); cámbielos en su `.env`.
 - SonarQube: http://localhost:9000 (usuario `admin`, clave `SONAR_ADMIN_PASSWORD` del `.env`).
 - Registry local de imágenes: `localhost:5000`.
 
@@ -231,7 +234,9 @@ convenciones en [`docs/convencion-ci.md`](docs/convencion-ci.md).
 a. Crear los `.env` (`cp .env.example .env`, `cp e2e-tests/.env.example e2e-tests/.env`) y ajustar claves.
 b. `docker compose -f docker-compose.ci.yml up -d`.
 c. En SonarQube: Quality Gate `cobertura-70` por defecto, token en `SONAR_TOKEN` y webhook `http://jenkins:8080/sonarqube-webhook/`.
-d. Recrear Jenkins (`up -d --force-recreate jenkins`) y lanzar los jobs `empleados-service`, `vacaciones-service` y `e2e-bdd`.
+d. Recrear Jenkins (`up -d --force-recreate jenkins`). Los jobs ya existen (JCasC los importa al arrancar);
+   para ejecutar uno a mano: Jenkins → job (`empleados-service`, `vacaciones-service` o `e2e-bdd`) →
+   *Build Now* (en los servicios, *Build with Parameters* permite desmarcar `RUN_SONAR`).
 
 Jenkins se configura solo (JCasC + Job DSL en `jenkins/casc/`): credenciales
 `sonar-token`, `env-sistema` y `env-e2e`, servidor Sonar y los tres jobs. Guía
