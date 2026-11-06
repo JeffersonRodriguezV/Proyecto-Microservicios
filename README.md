@@ -1,4 +1,4 @@
-# Sistema de Onboarding/Offboarding de Empleados — Retos 4 y 5
+# Sistema de Onboarding/Offboarding de Empleados — Retos 4, 5 y 7
 
 Sistema de microservicios para gestionar empleados, con comunicación REST
 síncrona, comunicación asincrónica por eventos a través de un message broker y,
@@ -213,3 +213,66 @@ producer, data}` y se publican en el exchange `ecosistema.eventos` (tipo
 `topic`), con el nombre del evento como routing key. Cada consumidor tiene su
 propia cola durable.
 
+## Integración continua (Reto 7)
+
+Cada servicio tiene un pipeline declarativo en Jenkins que compila, prueba,
+mide cobertura, valida la calidad en SonarQube, publica la imagen Docker y
+ejecuta la suite E2E (BDD). El CI vive en su propio compose
+(`docker-compose.ci.yml`), separado del sistema (`docker-compose.yml`): el CI
+es infraestructura de desarrollo y no debe arrancar con el sistema. Detalle de
+convenciones en [`docs/convencion-ci.md`](docs/convencion-ci.md).
+
+### Acceso
+- Jenkins: http://localhost:9090 (usuario y clave: `JENKINS_ADMIN_ID` / `JENKINS_ADMIN_PASSWORD` del `.env`).
+- SonarQube: http://localhost:9000 (usuario `admin`, clave `SONAR_ADMIN_PASSWORD` del `.env`).
+- Registry local de imágenes: `localhost:5000`.
+
+### Puesta en marcha
+a. Crear los `.env` (`cp .env.example .env`, `cp e2e-tests/.env.example e2e-tests/.env`) y ajustar claves.
+b. `docker compose -f docker-compose.ci.yml up -d`.
+c. En SonarQube: Quality Gate `cobertura-70` por defecto, token en `SONAR_TOKEN` y webhook `http://jenkins:8080/sonarqube-webhook/`.
+d. Recrear Jenkins (`up -d --force-recreate jenkins`) y lanzar los jobs `empleados-service`, `vacaciones-service` y `e2e-bdd`.
+
+Jenkins se configura solo (JCasC + Job DSL en `jenkins/casc/`): credenciales
+`sonar-token`, `env-sistema` y `env-e2e`, servidor Sonar y los tres jobs. Guía
+completa y problemas conocidos: [`docs/guia-reproducibilidad-ci.md`](docs/guia-reproducibilidad-ci.md).
+
+### Etapas del pipeline
+| Etapa | Qué hace | Si falla |
+|---|---|---|
+| Checkout | Clona el repo | FAILURE |
+| Build & Test | Compila, ejecuta pruebas con cobertura (JaCoCo / c8) y análisis Sonar (`RUN_SONAR`) | Compilación: FAILURE; pruebas rotas: **UNSTABLE** |
+| Quality Gate | Espera el veredicto de Sonar por webhook (`cobertura-70`: cobertura < 70 % falla) | FAILURE |
+| Package & Publish | `docker build` y `push` al registry (solo si todo es SUCCESS) | FAILURE |
+| E2E | Levanta el sistema completo y corre Cucumber en español (solo si todo es SUCCESS) | Escenarios rotos: **UNSTABLE** |
+
+Color del build: azul/verde = SUCCESS, amarillo = UNSTABLE (algo se probó y falló),
+rojo = FAILURE (el pipeline se detiene en esa etapa).
+
+### Reportes
+| Reporte | Dónde |
+|---|---|
+| Resultados de pruebas | Build → *Test Result* |
+| Cobertura | Build → *Coverage Report*, y dashboard en SonarQube |
+| BDD navegable | Build → *Cucumber Reports* y *Reporte BDD* (HTML) |
+| Logs del sistema en E2E | Build → artefacto `docker-logs.txt` |
+
+### Capturas
+| Qué muestra | Imagen |
+|---|---|
+| Stage View, build verde | ![](docs/img/p1-stage-view.png) |
+| Resultados de pruebas | ![](docs/img/p1-test-result.png) |
+| Cobertura (Jenkins) | ![](docs/img/p2-coverage.png) |
+| Cobertura y Quality Gate (Sonar) | ![](docs/img/p1-coverage.png) |
+| Reporte BDD navegable | ![](docs/img/e2e-cucumber-features.png) |
+
+### Fallos simulados
+| Fallo | Etapa donde se detiene | Evidencia |
+|---|---|---|
+| Prueba unitaria rota | Build & Test → UNSTABLE | `docs/img/p1-fallo.png` |
+| Cobertura bajo 70 % | Quality Gate → FAILURE | `docs/img/p2-sonar-fallo.png` |
+| Escenario BDD roto | E2E → UNSTABLE | `docs/img/e2e-build-fallido.png` |
+| Dockerfile roto (`COPY` a una ruta inexistente) | Package & Publish → FAILURE; E2E se omite | `docs/img/p4-fallo-dockerfile.png` |
+
+El fallo de Dockerfile se simula con *Replay* de Jenkins: se modifica solo la
+copia del workspace, el repositorio no se toca.

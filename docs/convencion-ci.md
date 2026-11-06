@@ -13,7 +13,7 @@ versionado junto a su código y un job definido como código en `jenkins/casc/jo
 | Credenciales del E2E | `env-sistema`, `env-e2e` | *Secret file* con `.env` y `e2e-tests/.env` |
 | Imagen Docker | `localhost:5000/microservicios/<servicio>:<BUILD_NUMBER>` y `:latest` | etapa Package & Publish |
 | Red Docker compartida | `proyecto-microservicios_microservices-network` | agentes que hablan con Sonar o con el sistema |
-| Quality Gate | `cobertura-70` | asignado a cada proyecto en Sonar |
+| Quality Gate | `cobertura-70` | Quality Gate por defecto de Sonar (aplica a todos los proyectos) |
 | Clave de proyecto Sonar | igual al nombre del servicio (`vacaciones-service`, `empleados-service`) | `sonar-project.properties` / `pom.xml` |
 | Puertos | Jenkins `9090`, SonarQube `9000`, Registry `5000` | `docker-compose.ci.yml` |
 
@@ -63,8 +63,9 @@ se ejecutan siempre con `RUN_SONAR` marcado.**
 
 - Ningún secreto vive en un `Jenkinsfile` ni en el repositorio. `.env` y `e2e-tests/.env` están en `.gitignore`.
 - El token de Sonar entra por la variable `SONAR_TOKEN` del `.env`, que JCasC convierte en la credencial `sonar-token`.
-- `env-sistema` y `env-e2e` se crean en **Manage Jenkins → Credentials → System → Global**.
-  JCasC borra las credenciales creadas a mano cuando Jenkins se recrea; hay que volver a crearlas.
+- `env-sistema` y `env-e2e` las declara JCasC (`jenkins/casc/jenkins.yaml`) a partir de `.env` y
+  `e2e-tests/.env`, montados en solo lectura en `/run/secrets/`. Ambos archivos deben existir antes de
+  levantar el CI; no se suben al repo y no hay que crear nada a mano.
 
 ## 7. Cachés y limpieza
 
