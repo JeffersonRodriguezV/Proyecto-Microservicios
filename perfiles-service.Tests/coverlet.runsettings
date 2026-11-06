@@ -9,7 +9,7 @@
     <DataCollectors>
       <DataCollector friendlyName="XPlat Code Coverage">
         <Configuration>
-          <Format>cobertura,lcov</Format>
+          <Format>cobertura,lcov,opencover</Format>
           <ExcludeByFile>**/Program.cs,**/RabbitMqConsumer.cs,**/AlmacenPerfilesSqlite.cs,**/PerfilRepo.cs,**/db.cs</ExcludeByFile>
         </Configuration>
       </DataCollector>

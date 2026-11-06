@@ -45,8 +45,8 @@ services:
     ports:
       - "15672:15672"                   # UI web de administración (AMQP :5672 queda interno)
     environment:
-      RABBITMQ_DEFAULT_USER: admin
-      RABBITMQ_DEFAULT_PASS: admin
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-admin}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Defina RABBITMQ_PASSWORD en .env (ejecute scripts/setup-secrets.sh)}
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq # Persiste colas, exchanges y mensajes no consumidos
     healthcheck:
@@ -72,13 +72,13 @@ services:
       - "8080"                          # Solo accesible dentro de la red Docker
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://db-empleados:3306/empleados_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-      SPRING_DATASOURCE_USERNAME: empleados_user
-      SPRING_DATASOURCE_PASSWORD: empleados_pass
+      SPRING_DATASOURCE_USERNAME: ${DB_EMPLEADOS_USER:-empleados_user}
+      SPRING_DATASOURCE_PASSWORD: ${DB_EMPLEADOS_PASSWORD:?Defina DB_EMPLEADOS_PASSWORD en .env}
       # --- Conexión al broker para PUBLICAR eventos ---
       RABBITMQ_HOST: message-broker
       RABBITMQ_PORT: 5672
-      RABBITMQ_USERNAME: admin
-      RABBITMQ_PASSWORD: admin
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-admin}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?Defina RABBITMQ_PASSWORD en .env}
     depends_on:
       db-empleados:
         condition: service_healthy
@@ -108,7 +108,7 @@ services:
     environment:
       DB_URL: postgresql://db-departamentos:5432/departamentos
       DB_USERNAME: postgres
-      DB_PASSWORD: postgres
+      DB_PASSWORD: ${DB_DEPARTAMENTOS_PASSWORD:?Defina DB_DEPARTAMENTOS_PASSWORD en .env}
     depends_on:
       db-departamentos:
         condition: service_healthy
@@ -125,8 +125,8 @@ services:
     environment:
       MYSQL_DATABASE: auth_db
       MYSQL_USER: auth_user
-      MYSQL_PASSWORD: auth_pass
-      MYSQL_ROOT_PASSWORD: root_auth_pass
+      MYSQL_PASSWORD: ${DB_AUTH_PASSWORD:?Defina DB_AUTH_PASSWORD en .env}
+      MYSQL_ROOT_PASSWORD: ${DB_AUTH_ROOT_PASSWORD:?Defina DB_AUTH_ROOT_PASSWORD en .env}
     volumes:
       - db-auth-data:/var/lib/mysql
       - ./auth-service/database:/docker-entrypoint-initdb.d:ro
@@ -156,8 +156,8 @@ services:
       # --- Conexión al broker para CONSUMIR eventos ---
       RABBITMQ_HOST: message-broker
       RABBITMQ_PORT: 5672
-      RABBITMQ_USERNAME: admin
-      RABBITMQ_PASSWORD: admin
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-admin}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?Defina RABBITMQ_PASSWORD en .env}
     volumes:
       - perfiles-data:/data             # Persistencia: sobrevive a "docker compose down"
     depends_on:
@@ -183,8 +183,8 @@ services:
       # --- Conexión al broker para CONSUMIR eventos ---
       RABBITMQ_HOST: message-broker
       RABBITMQ_PORT: 5672
-      RABBITMQ_USERNAME: admin
-      RABBITMQ_PASSWORD: admin
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-admin}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?Defina RABBITMQ_PASSWORD en .env}
     volumes:
       - notificaciones-data:/data
     depends_on:
@@ -210,8 +210,8 @@ services:
       # --- Conexión al broker para PUBLICAR eventos ---
       RABBITMQ_HOST: message-broker
       RABBITMQ_PORT: 5672
-      RABBITMQ_USERNAME: admin
-      RABBITMQ_PASSWORD: admin
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-admin}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?Defina RABBITMQ_PASSWORD en .env}
       # --- Validación síncrona del empleado (decisión documentada en el README) ---
       EMPLEADOS_URL: http://empleados-service:8080
       # --- Scheduler (Reto 5): frecuencia configurable y zona horaria que define "hoy" ---
@@ -238,8 +238,8 @@ services:
     environment:
       MYSQL_DATABASE: ${DB_EMPLEADOS_NAME:-empleados_db}
       MYSQL_USER: ${DB_EMPLEADOS_USER:-empleados_user}
-      MYSQL_PASSWORD: ${DB_EMPLEADOS_PASSWORD:-empleados_pass}
-      MYSQL_ROOT_PASSWORD: ${DB_EMPLEADOS_ROOT_PASSWORD:-root_empleados_pass}
+      MYSQL_PASSWORD: ${DB_EMPLEADOS_PASSWORD:?Defina DB_EMPLEADOS_PASSWORD en .env}
+      MYSQL_ROOT_PASSWORD: ${DB_EMPLEADOS_ROOT_PASSWORD:?Defina DB_EMPLEADOS_ROOT_PASSWORD en .env}
     volumes:
       - db-empleados-data:/var/lib/mysql
       - ./empleados-service/database:/docker-entrypoint-initdb.d:ro # crea el esquema al primer arranque
@@ -266,7 +266,7 @@ services:
     environment:
       POSTGRES_DB: departamentos
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${DB_DEPARTAMENTOS_PASSWORD:?Defina DB_DEPARTAMENTOS_PASSWORD en .env}
     volumes:
       - db-departamentos-data:/var/lib/postgresql/data
       # Se monta la CARPETA, no el archivo suelto: en Docker Desktop para Windows
@@ -295,16 +295,18 @@ services:
     environment:
       DB_URL: jdbc:mysql://db-auth:3306/auth_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       DB_USERNAME: auth_user
-      DB_PASSWORD: auth_pass
+      DB_PASSWORD: ${DB_AUTH_PASSWORD:?Defina DB_AUTH_PASSWORD en .env}
       RABBITMQ_HOST: message-broker
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-admin}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?Defina RABBITMQ_PASSWORD en .env}
       # Secreto compartido con el Gateway. Sin valor por defecto: si falta, compose se detiene.
       JWT_SECRET: ${JWT_SECRET:?Defina JWT_SECRET en el archivo .env}
       JWT_EXPIRATION_MINUTES: ${JWT_EXPIRATION_MINUTES:-60}
       JWT_RESET_EXPIRATION_MINUTES: ${JWT_RESET_EXPIRATION_MINUTES:-60}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@empresa.com}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin123!}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Defina ADMIN_PASSWORD en .env}
       SEED_USER_EMAIL: ${SEED_USER_EMAIL:-user@empresa.com}
-      SEED_USER_PASSWORD: ${SEED_USER_PASSWORD:-User123!}
+      SEED_USER_PASSWORD: ${SEED_USER_PASSWORD:?Defina SEED_USER_PASSWORD en .env}
     depends_on:
       db-auth:
         condition: service_healthy

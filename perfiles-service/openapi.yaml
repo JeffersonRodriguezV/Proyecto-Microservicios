@@ -1,0 +1,132 @@
+openapi: 3.0.3
+info:
+  title: Perfiles Service API
+  version: v1
+  description: >
+    Gestión de perfiles de empleados (reactivo + REST). Los perfiles se crean y archivan al consumir
+    los eventos empleado.creado, empleado.actualizado y empleado.retirado. La validación del JWT y la
+    regla "solo el propio perfil" las aplica el API Gateway (403 si se intenta editar el de otro).
+    Este archivo describe el contrato; la especificación en vivo está en /perfiles/swagger.
+servers:
+  - url: /
+security:
+  - BearerAuth: []
+tags:
+  - name: Perfiles
+  - name: Health
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Estado del servicio y de sus dependencias (base de datos, broker)
+      security: []
+      responses:
+        '200':
+          description: Todo UP
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
+        '503':
+          description: Alguna dependencia está DOWN
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
+  /perfiles:
+    get:
+      tags: [Perfiles]
+      summary: Lista todos los perfiles registrados
+      responses:
+        '200':
+          description: Lista de perfiles
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Perfil' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+  /perfiles/{empleadoId}:
+    parameters:
+      - name: empleadoId
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [Perfiles]
+      summary: Consulta el perfil de un empleado por su empleadoId
+      responses:
+        '200':
+          description: Perfil encontrado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Perfil' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+    put:
+      tags: [Perfiles]
+      summary: Actualiza telefono, direccion, ciudad y/o biografia de un perfil
+      description: Solo el propio empleado (o un ADMIN) puede modificarlo; el Gateway responde 403 en otro caso.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PerfilActualizacion' }
+      responses:
+        '200':
+          description: Perfil actualizado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Perfil' }
+        '401': { $ref: '#/components/responses/NoAutenticado' }
+        '403':
+          description: Intento de modificar el perfil de otro empleado
+        '404': { $ref: '#/components/responses/NoEncontrado' }
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Pegue el accessToken devuelto por POST /auth/login (sin el prefijo 'Bearer ').
+  responses:
+    NoAutenticado:
+      description: Falta el token o es inválido/vencido
+    NoEncontrado:
+      description: No existe un perfil para ese empleado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status: { type: integer, example: 404 }
+              mensaje: { type: string }
+  schemas:
+    Perfil:
+      type: object
+      properties:
+        id: { type: string }
+        empleadoId: { type: string }
+        nombre: { type: string }
+        email: { type: string, format: email }
+        telefono: { type: string }
+        direccion: { type: string }
+        ciudad: { type: string }
+        biografia: { type: string }
+        fechaCreacion: { type: string }
+        archivado: { type: boolean, description: true cuando el empleado fue retirado }
+    PerfilActualizacion:
+      type: object
+      properties:
+        telefono: { type: string, nullable: true }
+        direccion: { type: string, nullable: true }
+        ciudad: { type: string, nullable: true }
+        biografia: { type: string, nullable: true }
+    Health:
+      type: object
+      properties:
+        status: { type: string, enum: [UP, DOWN] }
+        service: { type: string, example: perfiles-service }
+        checks:
+          type: object
+          properties:
+            database: { type: string, enum: [UP, DOWN] }
+            messageBroker: { type: string, enum: [UP, DOWN] }

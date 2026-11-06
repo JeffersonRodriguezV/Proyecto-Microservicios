@@ -1,0 +1,135 @@
+openapi: 3.0.0
+info:
+  title: Vacaciones Service API
+  version: 1.0.0
+  description: Gestión de períodos de vacaciones de empleados
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Pegue el accessToken devuelto por POST /auth/login (sin el prefijo "Bearer ").
+security:
+- BearerAuth: []
+paths:
+  /health:
+    get:
+      summary: Estado del servicio y de sus dependencias (base de datos, broker)
+      security: []
+      responses:
+        '200':
+          description: Servicio y dependencias UP. Cuerpo {status, service, checks}
+        '503':
+          description: Alguna dependencia (base de datos o broker) está DOWN
+  /vacaciones:
+    post:
+      summary: Programa un período de vacaciones para un empleado
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - empleadoId
+              - fechaInicio
+              - fechaFin
+              properties:
+                empleadoId:
+                  type: string
+                fechaInicio:
+                  type: string
+                  format: date
+                fechaFin:
+                  type: string
+                  format: date
+      responses:
+        '201':
+          description: Período creado exitosamente
+        '400':
+          description: Alguna de las 4 validaciones falló
+    get:
+      summary: Lista todos los períodos, o los de un empleado específico
+      parameters:
+      - in: query
+        name: empleadoId
+        required: false
+        schema:
+          type: string
+        description: Si se incluye, filtra solo los períodos de ese empleado
+      responses:
+        '200':
+          description: Lista de períodos
+  /vacaciones/{id}:
+    get:
+      summary: Consulta un período de vacaciones por su id
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        example: V-2026-0042
+      responses:
+        '200':
+          description: Período encontrado
+        '404':
+          description: No existe un período con ese id
+    delete:
+      summary: Cancela un período que aún no ha iniciado
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        example: V-2026-0042
+      responses:
+        '200':
+          description: Período cancelado
+        '400':
+          description: El período ya inició, finalizó, o ya estaba cancelado
+        '404':
+          description: No existe un período con ese id
+  /vacaciones/{id}/forzar-inicio:
+    post:
+      summary: '[SOLO DESARROLLO] Fuerza el inicio de un período (equivale a que el scheduler lo detecte)'
+      description: Requiere DEV_ENDPOINTS=true y rol ADMIN. Pasa PROGRAMADA a EN_CURSO y publica vacaciones.iniciadas.
+      security:
+      - BearerAuth: []
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        example: V-2026-0042
+      responses:
+        '200':
+          description: Período iniciado
+        '400':
+          description: El período no está en estado PROGRAMADA
+        '404':
+          description: No existe un período con ese id
+  /vacaciones/{id}/forzar-fin:
+    post:
+      summary: '[SOLO DESARROLLO] Fuerza el fin de un período (equivale a que el scheduler lo detecte)'
+      description: Requiere DEV_ENDPOINTS=true y rol ADMIN. Pasa EN_CURSO a FINALIZADA y publica vacaciones.finalizadas.
+      security:
+      - BearerAuth: []
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        example: V-2026-0042
+      responses:
+        '200':
+          description: Período finalizado
+        '400':
+          description: El período no está en estado EN_CURSO
+        '404':
+          description: No existe un período con ese id
+tags: []

@@ -28,3 +28,5 @@ e2e-tests/.env
 **/node_modules/
 **/bin/
 **/obj/
+# Secretos locales
+secrets/

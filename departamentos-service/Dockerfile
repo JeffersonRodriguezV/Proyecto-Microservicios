@@ -14,6 +14,6 @@ COPY app ./app
 EXPOSE 8081
 
 HEALTHCHECK --interval=5s --timeout=3s --retries=10 --start-period=15s \
-    CMD curl -f http://localhost:8081/ || exit 1
+    CMD curl -f http://localhost:8081/health || exit 1
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8081"]

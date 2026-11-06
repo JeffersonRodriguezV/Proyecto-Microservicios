@@ -12,6 +12,23 @@ public static class Db
         return conexion;
     }
 
+    /// <summary>True si SQLite responde a un SELECT 1 (lo usa /health).</summary>
+    public static bool EstaDisponible()
+    {
+        try
+        {
+            using var conexion = ObtenerConexion();
+            var comando = conexion.CreateCommand();
+            comando.CommandText = "SELECT 1";
+            comando.ExecuteScalar();
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     public static void Inicializar()
     {
         using var conexion = ObtenerConexion();

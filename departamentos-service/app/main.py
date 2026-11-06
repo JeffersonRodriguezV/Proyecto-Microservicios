@@ -15,7 +15,7 @@ from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 
 from app.exceptions.handlers import registrar_exception_handlers
-from app.routers import departamentos
+from app.routers import departamentos, health
 
 app = FastAPI(
     title="Gestión de Departamentos",
@@ -57,9 +57,10 @@ app.openapi = openapi_con_bearer
 
 registrar_exception_handlers(app)
 app.include_router(departamentos.router)
+app.include_router(health.router)
 
 
 @app.get("/", include_in_schema=False)
 def root():
-    """Endpoint raíz, útil como target de healthcheck en Docker Compose."""
-    return {"servicio": "departamentos-service", "estado": "activo"}
+    """Endpoint raíz (compatibilidad). El estado real está en GET /health."""
+    return {"status": "UP", "service": "departamentos-service"}

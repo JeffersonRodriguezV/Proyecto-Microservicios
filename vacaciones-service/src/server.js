@@ -1,7 +1,9 @@
 const express = require('express');
 const repo = require('./vacacionesRepo');
 const { obtenerEmpleado } = require('./empleadosClient');
-const { publicar } = require('./eventoPublisher');
+const { publicar, brokerDisponible } = require('./eventoPublisher');
+const db = require('./db');
+const { crearHealthHandler } = require('./health');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
 const scheduler = require('./scheduler');
@@ -9,6 +11,8 @@ const desarrollo = require('./desarrollo');
 const app = express();
 const { crearServicioVacaciones } = require('./vacacionesService');
 app.use(express.json());
+// JSON de la especificación (lo consume el Swagger agregado del Gateway) y UI propia del servicio
+app.get('/vacaciones/api-docs.json', (req, res) => res.json(swaggerSpec));
 app.use('/vacaciones/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 const PORT = process.env.PORT || 8085;
 
@@ -28,15 +32,19 @@ const vacacionesService = crearServicioVacaciones({
  * @openapi
  * /health:
  *   get:
- *     summary: Verifica que el servicio esté activo
+ *     summary: Estado del servicio y de sus dependencias (base de datos, broker)
  *     security: []
  *     responses:
  *       200:
- *         description: El servicio está funcionando
+ *         description: Servicio y dependencias UP. Cuerpo {status, service, checks}
+ *       503:
+ *         description: Alguna dependencia (base de datos o broker) está DOWN
  */
-app.get('/health', (req, res) => {
-    res.status(200).json({ servicio: 'vacaciones-service', estado: 'activo' });
-});
+app.get('/health', crearHealthHandler({
+    servicio: 'vacaciones-service',
+    verificarBaseDatos: () => db.prepare('SELECT 1').get(),
+    verificarBroker: brokerDisponible,
+}));
 /**
  * @openapi
  * /vacaciones:

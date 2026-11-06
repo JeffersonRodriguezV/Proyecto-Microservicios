@@ -3,3 +3,7 @@ __pycache__/
 *.pyc
 *.iml
 .idea/
+.pytest_cache/
+.coverage
+coverage.xml
+reports/

@@ -3,7 +3,7 @@ Configuración de la conexión a la base de datos PostgreSQL.
 """
 
 import os
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, declarative_base
 
 DB_URL = os.getenv("DB_URL")
@@ -36,3 +36,13 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def verificar_conexion() -> bool:
+    """True si la base de datos responde a un SELECT 1 (usado por /health)."""
+    try:
+        with engine.connect() as conexion:
+            conexion.execute(text("SELECT 1"))
+        return True
+    except Exception:
+        return False

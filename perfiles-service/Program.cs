@@ -41,8 +41,12 @@ app.UseSwaggerUI(c =>
 Db.Inicializar();
 await RabbitMqConsumer.Iniciar();
 
-app.MapGet("/health", () => Results.Ok(new { servicio = "perfiles-service", estado = "activo" }))
-    .WithSummary("Verifica que el servicio esté activo");
+app.MapGet("/health", () =>
+{
+    var (codigo, cuerpo) = HealthService.Evaluar(Db.EstaDisponible, () => RabbitMqConsumer.Conectado);
+    return Results.Json(cuerpo, statusCode: codigo);
+})
+    .WithSummary("Estado del servicio y de sus dependencias (base de datos, broker). 200 si UP, 503 si DOWN");
 
 app.MapGet("/perfiles/{empleadoId}", (string empleadoId) =>
 {

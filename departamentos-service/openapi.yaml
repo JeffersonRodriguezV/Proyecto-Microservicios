@@ -1,0 +1,180 @@
+openapi: 3.1.0
+info:
+  title: Gestión de Departamentos
+  description: 'Microservicio de gestión de departamentos. Parte del sistema de onboarding/offboarding de empleados basado
+    en microservicios. Requiere JWT: obténgalo en POST /auth/login y use el botón Authorize.'
+  version: 0.1.0
+paths:
+  /departamentos:
+    get:
+      tags:
+      - Departamentos
+      summary: Listar todos los departamentos
+      operationId: listar_departamentos_departamentos_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/DepartamentoResponse'
+                type: array
+                title: Response Listar Departamentos Departamentos Get
+    post:
+      tags:
+      - Departamentos
+      summary: Registrar un nuevo departamento
+      description: 'Registra un departamento nuevo.
+
+
+        - **id**: código de negocio único (ej. "IT"), provisto por el cliente.
+
+        - **nombre**, **descripcion**: obligatorios, no vacíos.'
+      operationId: crear_departamento_departamentos_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DepartamentoCreate'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DepartamentoResponse'
+        '400':
+          description: El id ya está registrado, o los datos son inválidos
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /departamentos/{departamento_id}:
+    get:
+      tags:
+      - Departamentos
+      summary: Consultar un departamento por id
+      operationId: obtener_departamento_departamentos__departamento_id__get
+      parameters:
+      - name: departamento_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Departamento Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DepartamentoResponse'
+        '404':
+          description: No existe un departamento con ese id
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /health:
+    get:
+      tags:
+      - Health
+      summary: Estado de salud del servicio y de sus dependencias
+      operationId: health_health_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '503':
+          description: Alguna dependencia (base de datos) no responde
+components:
+  schemas:
+    DepartamentoCreate:
+      properties:
+        id:
+          type: string
+          maxLength: 50
+          minLength: 1
+          title: Id
+          description: 'Código de negocio del departamento, ej: ''IT'''
+        nombre:
+          type: string
+          maxLength: 100
+          minLength: 1
+          title: Nombre
+        descripcion:
+          type: string
+          maxLength: 255
+          minLength: 1
+          title: Descripcion
+      type: object
+      required:
+      - id
+      - nombre
+      - descripcion
+      title: DepartamentoCreate
+      description: Cuerpo esperado en POST /departamentos.
+    DepartamentoResponse:
+      properties:
+        id:
+          type: string
+          title: Id
+        nombre:
+          type: string
+          title: Nombre
+        descripcion:
+          type: string
+          title: Descripcion
+      type: object
+      required:
+      - id
+      - nombre
+      - descripcion
+      title: DepartamentoResponse
+      description: Forma en que se devuelve un Departamento en las respuestas.
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Pegue el accessToken devuelto por /auth/login (sin el prefijo 'Bearer ').
+security:
+- BearerAuth: []

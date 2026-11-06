@@ -149,7 +149,7 @@ JWT_SECRET=una-clave-academica-de-al-menos-32-caracteres npm start
 ### `GET /health`
 
 ```json
-{ "servicio": "api-gateway", "estado": "activo" }
+{ "status": "UP", "service": "api-gateway", "checks": {} }
 ```
 
 ## Manejo de errores

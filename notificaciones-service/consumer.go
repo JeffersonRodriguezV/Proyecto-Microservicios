@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sync/atomic"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -19,33 +20,69 @@ func obtenerEnv(clave, porDefecto string) string {
 	return porDefecto
 }
 
+// brokerConectado refleja si el consumidor está escuchando la cola (lo lee /health).
+var brokerConectado atomic.Bool
+
+// iniciarConsumidor mantiene vivo el consumo de eventos: si RabbitMQ no está disponible o la
+// conexión se cae, espera y vuelve a intentarlo (con espera creciente, máximo 30 s).
+// Antes terminaba para siempre al caer el broker y el servicio dejaba de recibir eventos.
 func iniciarConsumidor() {
+	if obtenerEnv("RABBITMQ_PASSWORD", "") == "" {
+		log.Fatal("RABBITMQ_PASSWORD no está definido (revise el archivo .env)")
+	}
+	espera := time.Second
+	for {
+		inicio := time.Now()
+		err := consumirUnaVez()
+		brokerConectado.Store(false)
+		log.Println("Consumidor detenido:", err, "- reintentando en", espera)
+		time.Sleep(espera)
+		espera = siguienteEspera(espera, time.Since(inicio))
+	}
+}
+
+// siguienteEspera calcula cuánto esperar antes del próximo reintento: se duplica hasta 30 s,
+// y vuelve a 1 s si la conexión anterior duró más de un minuto (fue estable).
+func siguienteEspera(actual, duracionConexion time.Duration) time.Duration {
+	if duracionConexion > time.Minute {
+		return time.Second
+	}
+	if actual < 30*time.Second {
+		return actual * 2
+	}
+	return actual
+}
+
+// consumirUnaVez abre la conexión, declara la topología y procesa mensajes hasta que el canal se cierra.
+func consumirUnaVez() error {
 	host := obtenerEnv("RABBITMQ_HOST", "localhost")
 	puerto := obtenerEnv("RABBITMQ_PORT", "5672")
 	usuario := obtenerEnv("RABBITMQ_USERNAME", "admin")
-	password := obtenerEnv("RABBITMQ_PASSWORD", "admin")
+	password := obtenerEnv("RABBITMQ_PASSWORD", "")
 	exchange := obtenerEnv("EVENTOS_EXCHANGE", "ecosistema.eventos")
 
 	url := fmt.Sprintf("amqp://%s:%s@%s:%s/", usuario, password, host, puerto)
 
 	conn, err := amqp.Dial(url)
 	if err != nil {
-		log.Fatal("No se pudo conectar a RabbitMQ:", err)
+		return fmt.Errorf("no se pudo conectar a RabbitMQ: %w", err)
 	}
+
+	defer conn.Close()
 
 	ch, err := conn.Channel()
 	if err != nil {
-		log.Fatal("No se pudo abrir el canal:", err)
+		return fmt.Errorf("no se pudo abrir el canal: %w", err)
 	}
 
 	err = ch.ExchangeDeclare(exchange, "topic", true, false, false, false, nil)
 	if err != nil {
-		log.Fatal("No se pudo declarar el exchange:", err)
+		return fmt.Errorf("no se pudo declarar el exchange: %w", err)
 	}
 
 	cola, err := ch.QueueDeclare("notificaciones-service.eventos", true, false, false, false, nil)
 	if err != nil {
-		log.Fatal("No se pudo declarar la cola:", err)
+		return fmt.Errorf("no se pudo declarar la cola: %w", err)
 	}
 
 	// Reto 5: la bienvenida del onboarding sale de usuario.creado (trae el token de
@@ -66,20 +103,25 @@ func iniciarConsumidor() {
 	for _, routingKey := range eventosRelevantes {
 		err = ch.QueueBind(cola.Name, routingKey, exchange, false, nil)
 		if err != nil {
-			log.Fatal("No se pudo enlazar la cola para", routingKey, ":", err)
+			return fmt.Errorf("no se pudo enlazar la cola para %s: %w", routingKey, err)
 		}
 	}
 
 	mensajes, err := ch.Consume(cola.Name, "", false, false, false, false, nil)
 	if err != nil {
-		log.Fatal("No se pudo iniciar el consumo:", err)
+		return fmt.Errorf("no se pudo iniciar el consumo: %w", err)
 	}
 
+	brokerConectado.Store(true)
 	log.Println("Escuchando eventos: empleado.retirado, vacaciones.programadas, usuario.creado, usuario.recuperacion, cuenta.activada, cuenta.desactivada")
 
 	for msg := range mensajes {
 		procesarMensaje(msg)
 	}
+
+	// El canal se cerró (RabbitMQ cayó o cerró la conexión): /health pasa a DOWN.
+	brokerConectado.Store(false)
+	return fmt.Errorf("la conexión con RabbitMQ se cerró")
 }
 
 func procesarMensaje(msg amqp.Delivery) {

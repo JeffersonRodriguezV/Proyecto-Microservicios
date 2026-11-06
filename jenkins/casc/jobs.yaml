@@ -35,6 +35,86 @@ jobs:
           }
         }
   - script: |
+      pipelineJob('auth-service') {
+        description('CI de auth-service (Java 21 / Spring Boot / Maven)')
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote { url('https://github.com/JeffersonRodriguezV/Proyecto-Microservicios.git') }
+                branch('*/main')
+              }
+            }
+            scriptPath('auth-service/Jenkinsfile')
+            lightweight(true)
+          }
+        }
+      }
+  - script: |
+      pipelineJob('api-gateway') {
+        description('CI de api-gateway (Node 22 / Express)')
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote { url('https://github.com/JeffersonRodriguezV/Proyecto-Microservicios.git') }
+                branch('*/main')
+              }
+            }
+            scriptPath('api-gateway/Jenkinsfile')
+            lightweight(true)
+          }
+        }
+      }
+  - script: |
+      pipelineJob('departamentos-service') {
+        description('CI de departamentos-service (Python / FastAPI)')
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote { url('https://github.com/JeffersonRodriguezV/Proyecto-Microservicios.git') }
+                branch('*/main')
+              }
+            }
+            scriptPath('departamentos-service/Jenkinsfile')
+            lightweight(true)
+          }
+        }
+      }
+  - script: |
+      pipelineJob('notificaciones-service') {
+        description('CI de notificaciones-service (Go)')
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote { url('https://github.com/JeffersonRodriguezV/Proyecto-Microservicios.git') }
+                branch('*/main')
+              }
+            }
+            scriptPath('notificaciones-service/Jenkinsfile')
+            lightweight(true)
+          }
+        }
+      }
+  - script: |
+      pipelineJob('perfiles-service') {
+        description('CI de perfiles-service (.NET 10)')
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote { url('https://github.com/JeffersonRodriguezV/Proyecto-Microservicios.git') }
+                branch('*/main')
+              }
+            }
+            scriptPath('perfiles-service/Jenkinsfile')
+            lightweight(true)
+          }
+        }
+      }
+  - script: |
       pipelineJob('e2e-bdd') {
         description('E2E BDD (Cucumber.js): levanta el sistema completo y ejecuta los escenarios en espanol')
         definition {

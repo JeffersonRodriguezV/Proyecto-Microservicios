@@ -16,12 +16,12 @@ RUN npm install --omit=dev
 
 COPY src ./src
 
-EXPOSE 3000
+EXPOSE 8080
 
 # Se usa el propio Node (con require('http')) para el healthcheck
 # en vez de instalar curl/wget, evitando una dependencia extra en
 # la imagen — el healthcheck apunta al propio /health del Gateway.
 HEALTHCHECK --interval=5s --timeout=3s --retries=10 --start-period=5s \
-    CMD node -e "require('http').get('http://localhost:' + (process.env.PORT || 3000) + '/health', res => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
+    CMD node -e "require('http').get('http://localhost:' + (process.env.PORT || 8080) + '/health', res => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
 
 CMD ["node", "src/server.js"]

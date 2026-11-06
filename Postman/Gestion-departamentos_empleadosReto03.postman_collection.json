@@ -16,10 +16,10 @@
               "    pm.response.to.have.status(200);",
               "});",
               "",
-              "pm.test('El Gateway reporta estado activo', function () {",
+              "pm.test('El Gateway reporta estado UP', function () {",
               "    var jsonData = pm.response.json();",
               "    pm.expect(jsonData.servicio).to.eql('api-gateway');",
-              "    pm.expect(jsonData.estado).to.eql('activo');",
+              "    pm.expect(jsonData.status).to.eql('UP');",
               "});"
             ],
             "type": "text/javascript"

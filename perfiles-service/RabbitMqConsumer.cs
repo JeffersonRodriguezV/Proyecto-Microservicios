@@ -5,12 +5,17 @@ using RabbitMQ.Client.Events;
 
 public static class RabbitMqConsumer
 {
+    // Refleja si el consumidor está conectado al broker (lo lee /health).
+    private static volatile bool _conectado;
+    public static bool Conectado => _conectado;
+
     public static async Task Iniciar()
     {
         var host = Environment.GetEnvironmentVariable("RABBITMQ_HOST") ?? "localhost";
         var port = int.Parse(Environment.GetEnvironmentVariable("RABBITMQ_PORT") ?? "5672");
         var usuario = Environment.GetEnvironmentVariable("RABBITMQ_USERNAME") ?? "admin";
-        var password = Environment.GetEnvironmentVariable("RABBITMQ_PASSWORD") ?? "admin";
+        var password = Environment.GetEnvironmentVariable("RABBITMQ_PASSWORD")
+            ?? throw new InvalidOperationException("RABBITMQ_PASSWORD no está definido (revise el archivo .env)");
         var exchange = Environment.GetEnvironmentVariable("EVENTOS_EXCHANGE") ?? "ecosistema.eventos";
 
         var factory = new ConnectionFactory
@@ -18,10 +23,18 @@ public static class RabbitMqConsumer
             HostName = host,
             Port = port,
             UserName = usuario,
-            Password = password
+            Password = password,
+            // Reconexión automática (incluye re-declarar colas y consumidores) si el broker se reinicia.
+            AutomaticRecoveryEnabled = true,
+            TopologyRecoveryEnabled = true,
+            NetworkRecoveryInterval = TimeSpan.FromSeconds(5)
         };
 
         var conexion = await factory.CreateConnectionAsync();
+        // Si el broker cierra la conexión, /health pasa a DOWN.
+        conexion.ConnectionShutdownAsync += (_, _) => { _conectado = false; return Task.CompletedTask; };
+        // Al recuperarse la conexión, /health vuelve a UP.
+        conexion.RecoverySucceededAsync += (_, _) => { _conectado = true; return Task.CompletedTask; };
         var canal = await conexion.CreateChannelAsync();
 
         await canal.ExchangeDeclareAsync(exchange, ExchangeType.Topic, durable: true);
@@ -58,6 +71,7 @@ public static class RabbitMqConsumer
         };
 
         await canal.BasicConsumeAsync(nombreCola, autoAck: false, consumidor);
+        _conectado = true;
 
         Console.WriteLine("Escuchando eventos: empleado.creado, empleado.actualizado, empleado.retirado");
     }

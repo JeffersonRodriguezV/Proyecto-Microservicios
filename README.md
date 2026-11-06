@@ -53,14 +53,26 @@ Requisito: Docker Desktop corriendo.
 ```bash
 git clone https://github.com/JeffersonRodriguezV/Proyecto-Microservicios.git
 cd Proyecto-Microservicios
-cp .env.example .env          # en Windows (PowerShell): copy .env.example .env
+bash scripts/setup-secrets.sh   # genera .env con secretos aleatorios
+                                # Windows: powershell -ExecutionPolicy Bypass -File scripts\setup-secrets.ps1
 docker compose up --build
 ```
 
-El archivo `.env` define `JWT_SECRET` (mínimo 32 caracteres) y **no se sube al
-repositorio**. Sin él, `docker compose` se detiene con un mensaje claro: el
-secreto nunca tiene un valor por defecto. Cámbielo por uno propio si va más allá
-de un uso académico.
+### Secretos y rotación
+
+Ninguna contraseña ni clave está en el repositorio. `.env.example` solo trae marcadores
+(`CHANGE_ME`) y `scripts/setup-secrets.sh` (o `.ps1`) crea `.env` generando un valor
+aleatorio por cada marcador: JWT, RabbitMQ, bases de datos, usuarios semilla y CI.
+`.env` y `secrets/` están en `.gitignore`. Sin esas variables `docker compose` se detiene
+con un mensaje claro: los secretos no tienen valor por defecto.
+
+- El script es idempotente: no pisa valores que ya existen y solo agrega los que falten.
+- **Rotar**: `bash scripts/setup-secrets.sh --rotate` (`-Rotar` en PowerShell). Las bases de
+  datos y RabbitMQ guardan la clave anterior en sus volúmenes, así que después hay que
+  recrearlos: `docker compose down -v && docker compose up --build` (borra los datos locales).
+- `SONAR_TOKEN` se genera en SonarQube (Mi cuenta > Seguridad) y se pega a mano en `.env`.
+- **CI**: la credencial `env-sistema` de Jenkins (archivo secreto) debe ser el `.env` generado.
+  Tras actualizar `.env.example`, vuelva a subirla o los pipelines fallarán por variables faltantes.
 
 En otra terminal, `docker compose ps` debe mostrar los **11 contenedores**
 `healthy`. URL base de todo el sistema: `http://localhost:8080`. Interfaz del
@@ -225,8 +237,8 @@ convenciones en [`docs/convencion-ci.md`](docs/convencion-ci.md).
 ### Acceso
 - Jenkins: http://localhost:9090 (usuario y clave: `JENKINS_ADMIN_ID` / `JENKINS_ADMIN_PASSWORD` del `.env`).
   No hay contraseña inicial aleatoria que buscar: el asistente de configuración está desactivado
-  (`runSetupWizard=false`) y el administrador lo crea JCasC con esas dos variables. Los valores por
-  defecto están en `.env.example` (`admin` / `cambie-esta-clave`); cámbielos en su `.env`.
+  (`runSetupWizard=false`) y el administrador lo crea JCasC con esas dos variables. Los valores los
+  genera `scripts/setup-secrets` en su `.env`.
 - SonarQube: http://localhost:9000 (usuario `admin`, clave `SONAR_ADMIN_PASSWORD` del `.env`).
 - Registry local de imágenes: `localhost:5000`.
 
@@ -281,3 +293,11 @@ rojo = FAILURE (el pipeline se detiene en esa etapa).
 
 El fallo de Dockerfile se simula con *Replay* de Jenkins: se modifica solo la
 copia del workspace, el repositorio no se toca.
+
+## Documentación adicional
+
+- [`docs/arquitectura.md`](docs/arquitectura.md): servicios, decisiones y `/health`.
+- [`docs/eventos.md`](docs/eventos.md): catálogo de eventos y deduplicación.
+- [`docs/guias/`](docs/guias): despliegue local y ejecución de pruebas.
+- [`scripts/init-db.sql`](scripts/init-db.sql) y [`scripts/seed-data.sql`](scripts/seed-data.sql): esquema de referencia y datos de ejemplo.
+- Swagger agregado de todos los servicios: `http://localhost:8080/swagger`.

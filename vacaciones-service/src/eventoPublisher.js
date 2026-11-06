@@ -8,7 +8,7 @@ const crypto = require('crypto');
 const RABBITMQ_HOST = process.env.RABBITMQ_HOST || 'localhost';
 const RABBITMQ_PORT = process.env.RABBITMQ_PORT || '5672';
 const RABBITMQ_USERNAME = process.env.RABBITMQ_USERNAME || 'admin';
-const RABBITMQ_PASSWORD = process.env.RABBITMQ_PASSWORD || 'admin';
+const RABBITMQ_PASSWORD = process.env.RABBITMQ_PASSWORD; // sin valor por defecto: viene del .env
 
 // Mismo exchange compartido por todo el ecosistema
 const EXCHANGE = process.env.EVENTOS_EXCHANGE || 'ecosistema.eventos';
@@ -22,8 +22,16 @@ let canalCache = null;
 async function obtenerCanal() {
     if (canalCache) return canalCache;
 
+    if (!RABBITMQ_PASSWORD) {
+        throw new Error('RABBITMQ_PASSWORD no está definido (revise el archivo .env)');
+    }
     const url = `amqp://${RABBITMQ_USERNAME}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}`;
     const conexion = await amqp.connect(url);
+    // Si el broker cierra la conexión, se descarta el canal cacheado para reconectar en la próxima publicación
+    // (y /health lo reporta como DOWN mientras no haya conexión).
+    const descartar = () => { canalCache = null; };
+    conexion.on('close', descartar);
+    conexion.on('error', descartar);
     const canal = await conexion.createChannel();
    //Lo crea si no existe, y lo marca como durable para que sobreviva reinicios del broker
     await canal.assertExchange(EXCHANGE, 'topic', { durable: true });
@@ -58,4 +66,14 @@ async function publicar(type, data) {
     }
 }
 
-module.exports = { publicar };
+/** True si hay (o se logra abrir) conexión con el broker. Lo usa /health. */
+async function brokerDisponible() {
+    try {
+        await obtenerCanal();
+        return true;
+    } catch (error) {
+        return false;
+    }
+}
+
+module.exports = { publicar, brokerDisponible };

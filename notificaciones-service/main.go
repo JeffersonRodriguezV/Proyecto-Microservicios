@@ -1,29 +1,27 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 )
+
+// construirMux registra todas las rutas del servicio. Está separado de main()
+// para poder probar los endpoints sin abrir un puerto real.
+func construirMux() *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/health", manejarHealth)
+	mux.HandleFunc("/notificaciones", manejarNotificaciones)
+	mux.HandleFunc("/notificaciones/", manejarNotificaciones)
+	mux.HandleFunc("/notificaciones/docs", servirSwaggerUI)
+	mux.HandleFunc("/notificaciones/openapi.json", servirOpenAPI)
+	return mux
+}
 
 func main() {
 	inicializarDB()
 
 	go iniciarConsumidor()
 
-	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{
-			"servicio": "notificaciones-service",
-			"estado":   "activo",
-		})
-	})
-
-	http.HandleFunc("/notificaciones", manejarNotificaciones)
-	http.HandleFunc("/notificaciones/", manejarNotificaciones)
-	http.HandleFunc("/notificaciones/docs", servirSwaggerUI)
-    http.HandleFunc("/notificaciones/openapi.json", servirOpenAPI)
-
 	log.Println("notificaciones-service escuchando en el puerto 8084")
-	log.Fatal(http.ListenAndServe(":8084", nil))
+	log.Fatal(http.ListenAndServe(":8084", construirMux()))
 }

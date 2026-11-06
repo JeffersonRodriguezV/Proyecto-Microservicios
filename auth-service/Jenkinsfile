@@ -1,0 +1,125 @@
+// Pipeline CI de auth-service (Java 21 / Spring Boot / Maven)
+// Etapas: Checkout -> Build & Test (JaCoCo >= 70%) -> SonarQube -> Quality Gate -> Package & Publish.
+// El E2E del sistema completo lo ejecuta el job 'e2e-bdd'.
+pipeline {
+    // Cada stage declara su propio agente (el E2E necesitara Docker en el host).
+    agent none
+
+    // RUN_SONAR=false permite ejecutar el pipeline sin SonarQube (equipos con poca RAM).
+    // Por defecto (builds normales) el analisis y el Quality Gate SI corren.
+    parameters {
+        booleanParam(name: 'RUN_SONAR', defaultValue: true,
+                     description: 'Ejecutar analisis SonarQube y Quality Gate')
+    }
+
+    options {
+        timeout(time: 30, unit: 'MINUTES')
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+
+    stages {
+        stage('Checkout') {
+            agent any
+            steps {
+                checkout scm
+                // Se guarda el workspace para que los agentes Maven lo reutilicen sin repetir el clone.
+                stash name: 'src', includes: 'auth-service/**'
+            }
+        }
+
+        // Agente Maven con cache de ~/.m2 y docker.sock (por si los tests usan Testcontainers).
+        stage('Build & Test') {
+            agent {
+                docker {
+                    image 'maven:3.9-eclipse-temurin-21'
+                    // --network: para que el agente alcance a SonarQube por su nombre ('sonarqube').
+                    // El nombre depende de la carpeta del proyecto (docker compose <carpeta>_microservices-network).
+                    args '-u root -v maven_cache:/root/.m2 -v /var/run/docker.sock:/var/run/docker.sock ' +
+                         '--add-host=host.docker.internal:host-gateway ' +
+                         '--network proyecto-microservicios_microservices-network'
+                }
+            }
+            environment {
+                TESTCONTAINERS_HOST_OVERRIDE = 'host.docker.internal'
+            }
+            steps {
+                unstash 'src'
+                dir('auth-service') {
+                    // Compilar: si falla, el build termina en FAILURE.
+                    sh 'mvn -B -q clean compile -DskipTests'
+
+                    // Tests + JaCoCo. Los tests fallidos NO rompen aqui: marcan UNSTABLE.
+                    // (mvn verify aplica ademas el minimo de 70% de cobertura definido en el pom)
+                    sh 'mvn -B verify -Dmaven.test.failure.ignore=true'
+
+                    // Analisis estatico + cobertura hacia SonarQube.
+                    // withSonarQubeEnv inyecta SONAR_HOST_URL y el token (credencial 'sonar-token').
+                    // Con RUN_SONAR=false (Build with Parameters) se omite el analisis.
+                    script {
+                        if (params.RUN_SONAR == true) {
+                            withSonarQubeEnv('sonarqube') {
+                                sh '''mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+                                      -Dsonar.projectKey=auth-service \
+                                      -Dsonar.projectName=auth-service'''
+                            }
+                        } else {
+                            echo 'RUN_SONAR desactivado: se omite el analisis SonarQube'
+                        }
+                    }
+                }
+            }
+            post {
+                always {
+                    junit testResults: 'auth-service/target/surefire-reports/*.xml, auth-service/target/failsafe-reports/*.xml',
+                          allowEmptyResults: true
+                    recordCoverage(
+                        tools: [[parser: 'JACOCO', pattern: 'auth-service/target/site/jacoco/jacoco.xml']],
+                        sourceDirectories: [[path: 'auth-service/src/main/java']],
+                        sourceCodeRetention: 'LAST_BUILD'
+                    )
+                    // Devolver el workspace al usuario jenkins para que pueda limpiarlo.
+                    sh 'chown -R 1000:1000 auth-service/target || true'
+                }
+            }
+        }
+
+        // Espera el veredicto de SonarQube (llega por el webhook). Si el gate falla, FAILURE.
+        stage('Quality Gate') {
+            when { expression { params.RUN_SONAR == true } }
+            agent any
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+
+        // Construye la imagen del servicio y la publica en el registry local.
+        // Solo corre si todo lo anterior salio SUCCESS (no se publica con tests rotos).
+        stage('Package & Publish') {
+            when { expression { currentBuild.currentResult == 'SUCCESS' } }
+            agent any
+            environment {
+                // El daemon Docker es el del host, por eso 'localhost:5000' es el registry publicado.
+                IMAGE = 'localhost:5000/microservicios/auth-service'
+            }
+            steps {
+                checkout scm
+                dir('auth-service') {
+                    sh 'docker build -t $IMAGE:$BUILD_NUMBER -t $IMAGE:latest .'
+                }
+                sh 'docker push $IMAGE:$BUILD_NUMBER'
+                sh 'docker push $IMAGE:latest'
+            }
+            post {
+                always {
+                    sh 'docker rmi $IMAGE:$BUILD_NUMBER $IMAGE:latest || true'
+                }
+                success {
+                    echo "Imagen publicada: ${IMAGE}:${BUILD_NUMBER}"
+                }
+            }
+        }
+    }
+}
