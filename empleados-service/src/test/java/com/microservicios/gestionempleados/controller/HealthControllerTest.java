@@ -20,7 +20,7 @@ class HealthControllerTest {
 
     private final DataSource dataSource = mock(DataSource.class);
     private final ConnectionFactory connectionFactory = mock(ConnectionFactory.class);
-    private final HealthController controller = new HealthController(dataSource, connectionFactory, "empleados-service");
+    private final HealthController controller = new HealthController(dataSource, connectionFactory);
 
     private void baseDatos(boolean valida) throws SQLException {
         java.sql.Connection conexion = mock(java.sql.Connection.class);

@@ -3,7 +3,6 @@ package com.microservicios.gestionempleados.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,17 +25,15 @@ import java.util.Map;
 public class HealthController {
 
     private static final int TIMEOUT_VALIDACION_SEGUNDOS = 2;
+    // Nombre fijo del servicio en el formato comun de /health (no depende de spring.application.name).
+    private static final String SERVICIO = "empleados-service";
 
     private final DataSource dataSource;
     private final ConnectionFactory connectionFactory;
-    private final String servicio;
 
-    public HealthController(DataSource dataSource,
-                            ConnectionFactory connectionFactory,
-                            @Value("${spring.application.name:empleados-service}") String servicio) {
+    public HealthController(DataSource dataSource, ConnectionFactory connectionFactory) {
         this.dataSource = dataSource;
         this.connectionFactory = connectionFactory;
-        this.servicio = servicio;
     }
 
     @GetMapping("/health")
@@ -53,7 +50,7 @@ public class HealthController {
 
         Map<String, Object> cuerpo = new LinkedHashMap<>();
         cuerpo.put("status", estado(arriba));
-        cuerpo.put("service", servicio);
+        cuerpo.put("service", SERVICIO);
         cuerpo.put("checks", checks);
 
         return ResponseEntity.status(arriba ? HttpStatus.OK : HttpStatus.SERVICE_UNAVAILABLE).body(cuerpo);
