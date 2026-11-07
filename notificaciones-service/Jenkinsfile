@@ -40,6 +40,9 @@ pipeline {
                     sh 'go vet ./...'
                     // Los tests fallidos no rompen aqui; el resumen queda en reports/test.log.
                     sh 'go test ./... -covermode=atomic -coverprofile=reports/coverage.out -v 2>&1 | tee reports/test.log || true'
+                    // JUnit XML y Cobertura XML para publicarlos en Jenkins (el '|| true' deja llegar al bloque post).
+                    sh 'go run github.com/jstemmer/go-junit-report/v2@v2.1.0 < reports/test.log > reports/junit.xml || true'
+                    sh 'go run github.com/boumenot/gocover-cobertura@v1.2.0 < reports/coverage.out > reports/coverage.xml || true'
                     sh 'go tool cover -func=reports/coverage.out | tail -n 1'
                 }
                 // Los reportes los necesita el analisis de SonarQube.
@@ -47,6 +50,13 @@ pipeline {
             }
             post {
                 always {
+                    // junit marca el build UNSTABLE si hay pruebas fallidas.
+                    junit testResults: 'notificaciones-service/reports/junit.xml', allowEmptyResults: true
+                    recordCoverage(
+                        tools: [[parser: 'COBERTURA', pattern: 'notificaciones-service/reports/coverage.xml']],
+                        sourceDirectories: [[path: 'notificaciones-service']],
+                        sourceCodeRetention: 'LAST_BUILD'
+                    )
                     archiveArtifacts artifacts: 'notificaciones-service/reports/**', allowEmptyArchive: true
                     sh 'chown -R 1000:1000 notificaciones-service || true'
                 }
