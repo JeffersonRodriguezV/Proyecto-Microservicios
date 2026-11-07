@@ -46,6 +46,23 @@ pipeline {
                     find /reports/coverage -name 'coverage.cobertura.xml' -exec cp {} perfiles-service/reports/coverage.cobertura.xml \\; || true
                     find /reports/coverage -name 'coverage.opencover.xml' -exec cp {} perfiles-service/reports/coverage.opencover.xml \\; || true
                     find /reports/coverage -name 'coverage.info' -exec cp {} perfiles-service/reports/lcov.info \\; || true
+                    # Cobertura -> formato "Generic Test Coverage" de Sonar (sonar.coverageReportPaths).
+                    # El sonar-scanner generico no importa el opencover de C# (eso lo hace SonarScanner for .NET).
+                    # Las rutas del Cobertura ya son relativas a perfiles-service, donde corre el scanner.
+                    awk -v q='"' '
+                      /<class / { match($0, /filename="[^"]*"/); cur = substr($0, RSTART + 10, RLENGTH - 11)
+                                  if (!(cur in visto)) { visto[cur] = 1; orden[++n] = cur } }
+                      /<line /  { match($0, /number="[0-9]+"/); ln = substr($0, RSTART + 8, RLENGTH - 9)
+                                  match($0, /hits="[0-9]+"/);   h  = substr($0, RSTART + 6, RLENGTH - 7) + 0
+                                  k = cur SUBSEP ln
+                                  if (!(k in hits)) { hits[k] = h; nums[cur] = nums[cur] " " ln } else if (h > hits[k]) hits[k] = h }
+                      END { print "<coverage version=" q "1" q ">"
+                            for (i = 1; i <= n; i++) { f = orden[i]; print "  <file path=" q f q ">"
+                              m = split(nums[f], a, " ")
+                              for (j = 1; j <= m; j++) print "    <lineToCover lineNumber=" q a[j] q " covered=" q ((hits[f SUBSEP a[j]] > 0) ? "true" : "false") q "/>"
+                              print "  </file>" }
+                            print "</coverage>" }
+                    ' perfiles-service/reports/coverage.cobertura.xml > perfiles-service/reports/coverage-generic.xml || true
                 '''
                 stash name: 'reportes', includes: 'perfiles-service/reports/**', allowEmpty: true
             }
