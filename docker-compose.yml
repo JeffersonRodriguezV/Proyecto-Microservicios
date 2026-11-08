@@ -297,6 +297,7 @@ services:
       DB_USERNAME: auth_user
       DB_PASSWORD: ${DB_AUTH_PASSWORD:?Defina DB_AUTH_PASSWORD en .env}
       RABBITMQ_HOST: message-broker
+      RABBITMQ_PORT: 5672
       RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-admin}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?Defina RABBITMQ_PASSWORD en .env}
       # Secreto compartido con el Gateway. Sin valor por defecto: si falta, compose se detiene.
@@ -342,6 +343,77 @@ services:
     networks:
       - microservices-network
 
+  # ==========================================================================
+  # OBSERVABILIDAD: Prometheus / Zipkin / Loki / Promtail / Grafana
+  # ==========================================================================
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: prometheus
+    ports:
+      - "9091:9090"                     # 9090 ocupado por Jenkins en el host; dentro del contenedor sigue siendo 9090
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/prometheus/rules.yml:/etc/prometheus/rules.yml:ro
+      - prometheus-data:/prometheus     # Persistencia del histórico de métricas
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  zipkin:
+    image: openzipkin/zipkin:3.4.2
+    container_name: zipkin
+    ports:
+      - "9411:9411"
+    environment:
+      JAVA_OPTS: "-Xmx256m"             # Zipkin es JVM; acota la memoria
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:3.2.1
+    container_name: loki
+    command: -config.file=/etc/loki/loki-config.yml
+    volumes:
+      - ./observability/loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki-data:/loki
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  promtail:
+    image: grafana/promtail:3.2.1
+    container_name: promtail
+    command: -config.file=/etc/promtail/promtail-config.yml
+    volumes:
+      - ./observability/promtail/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      loki:
+        condition: service_started
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Defina GRAFANA_ADMIN_PASSWORD en .env}
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./observability/grafana/provisioning/:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+      - loki
+      - zipkin
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
 # ============================================================================
 # VOLÚMENES NOMBRADOS
 # ============================================================================
@@ -353,6 +425,9 @@ volumes:
   notificaciones-data:                  # SQLite de notificaciones
   vacaciones-data:                      # SQLite de vacaciones
   db-auth-data:                         # MySQL de auth
+  prometheus-data:                      # Histórico de métricas de Prometheus
+  loki-data:                            # Índice + chunks de Loki
+  grafana-data:                         # Dashboards, usuarios y BD de Grafana
 
 # ============================================================================
 # REDES
