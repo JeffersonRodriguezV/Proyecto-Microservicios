@@ -17,6 +17,7 @@ const express = require('express');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const { autenticar, autorizar } = require('./security');
 const { rutaSwagger } = require('./swagger');
+const { middlewareMetrics, registrarRutas } = require('./observabilidad');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -57,6 +58,11 @@ function crearProxy(target, prefix) {
         },
     });
 }
+
+// Observabilidad (Reto 8): cuenta y mide cada petición, escribe un log JSON y publica /metrics
+// (público, lo consulta Prometheus sin JWT). Va antes de la seguridad para medir también los 401/403.
+app.use(middlewareMetrics);
+registrarRutas(app);
 
 // Healthcheck del gateway (público, se declara antes de la seguridad).
 // Formato común del proyecto: {status, service, checks}. El gateway no tiene
