@@ -1,5 +1,7 @@
 const amqp = require('amqplib');
 const crypto = require('crypto');
+const { context, propagation } = require('@opentelemetry/api');
+const { logger } = require('./observabilidad');
 
 // Credenciales y ubicación de RabbitMQ, todas con valores por
 // defecto para pruebas locales (admin/admin, localhost). En el
@@ -60,9 +62,15 @@ async function publicar(type, data) {
             data,
         };
 
-        canal.publish(EXCHANGE, type, Buffer.from(JSON.stringify(envelope)));
+        // Propagación W3C: inyecta `traceparent` (y `tracestate`) en las cabeceras del mensaje para que
+        // el consumidor cuelgue su span de la misma traza. Sin SDK activo (pruebas) no agrega nada.
+        const headers = {};
+        propagation.inject(context.active(), headers);
+
+        canal.publish(EXCHANGE, type, Buffer.from(JSON.stringify(envelope)), { headers });
+        logger.info('evento publicado', { evento: type, traceparent: headers.traceparent });
     } catch (error) {
-        console.error(`No se pudo publicar el evento '${type}':`, error.message);
+        logger.error('No se pudo publicar el evento', { evento: type, error: error.message });
     }
 }
 

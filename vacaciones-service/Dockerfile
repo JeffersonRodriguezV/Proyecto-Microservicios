@@ -18,4 +18,4 @@ EXPOSE 8085
 HEALTHCHECK --interval=5s --timeout=3s --retries=10 --start-period=10s \
     CMD wget -qO- http://localhost:8085/health || exit 1
 # Inicia el servidor usando SQLite experimental de Node.js
-CMD ["node", "--experimental-sqlite", "src/server.js"]
+CMD ["node", "--experimental-sqlite", "--require", "./src/tracing.js", "src/server.js"]

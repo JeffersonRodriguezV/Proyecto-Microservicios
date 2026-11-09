@@ -8,8 +8,11 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
 const scheduler = require('./scheduler');
 const desarrollo = require('./desarrollo');
+const { middlewareMetrics, registrarRutas } = require('./observabilidad');
 const app = express();
 const { crearServicioVacaciones } = require('./vacacionesService');
+app.use(middlewareMetrics);   // métricas Prometheus + log JSON por petición
+registrarRutas(app);          // GET /metrics
 app.use(express.json());
 // JSON de la especificación (lo consume el Swagger agregado del Gateway) y UI propia del servicio
 app.get('/vacaciones/api-docs.json', (req, res) => res.json(swaggerSpec));
@@ -164,6 +167,6 @@ if (desarrollo.habilitado) {
 }
 
 app.listen(PORT, () => {
-    console.log(`vacaciones-service escuchando en el puerto ${PORT}`);
+    require("./observabilidad").logger.info("vacaciones-service escuchando", { puerto: PORT });
     scheduler.arrancar();
 });

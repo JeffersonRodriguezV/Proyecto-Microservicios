@@ -107,13 +107,14 @@ test('ejecutarCiclo: inicia lo que llegó y, en la pasada siguiente, finaliza lo
 });
 
 test('ejecutarCiclo: un error al publicar se registra y no tumba el scheduler', async (t) => {
-    const consola = t.mock.method(console, 'error', () => {});
+    const { logger } = require('../src/observabilidad');
+    const consola = t.mock.method(logger, 'error', () => {});
     repo.crear({ empleadoId: 'S-8', email: 'e@x.com', fechaInicio: '2000-01-01', fechaFin: '2000-01-05' });
     publicador.falla = true;
 
     await assert.doesNotReject(scheduler.ejecutarCiclo());
     assert.equal(consola.mock.callCount(), 1);
-    assert.match(consola.mock.calls[0].arguments[1], /broker caído/);
+    assert.match(consola.mock.calls[0].arguments[1].error, /broker caído/);
 
     // el candado se libera: la siguiente pasada puede ejecutarse
     publicador.falla = false;

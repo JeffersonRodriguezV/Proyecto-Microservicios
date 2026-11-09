@@ -12,7 +12,10 @@ const sdk = new NodeSDK({
         url: process.env.OTEL_EXPORTER_ZIPKIN_ENDPOINT || 'http://zipkin:9411/api/v2/spans',
     }),
     // La propagación W3C (tracecontext + baggage) viene por defecto.
-    instrumentations: [new HttpInstrumentation(), new ExpressInstrumentation()],
+    instrumentations: [new HttpInstrumentation({
+            // El healthcheck de Docker y Prometheus consultan cada pocos segundos: no generan trazas.
+            ignoreIncomingRequestHook: (req) => ['/health', '/metrics'].includes((req.url || '').split('?')[0]),
+        }), new ExpressInstrumentation()],
 });
 
 sdk.start();
