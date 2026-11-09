@@ -14,7 +14,9 @@ lo consulta directamente (sin token) para validar el departamentoId.
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 
+from app.database import engine
 from app.exceptions.handlers import registrar_exception_handlers
+from app.observabilidad import configurar_observabilidad
 from app.routers import departamentos, health
 
 app = FastAPI(
@@ -56,6 +58,7 @@ def openapi_con_bearer():
 app.openapi = openapi_con_bearer
 
 registrar_exception_handlers(app)
+configurar_observabilidad(app, engine)  # Reto 8: métricas, trazas y logs JSON
 app.include_router(departamentos.router)
 app.include_router(health.router)
 

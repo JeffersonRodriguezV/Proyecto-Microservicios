@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using Serilog;
 
 public static class RabbitMqConsumer
 {
@@ -57,12 +58,14 @@ public static class RabbitMqConsumer
                 var envelope = JsonSerializer.Deserialize<EventoEnvelope>(json);
                 if (envelope != null)
                 {
+                    // Continúa la traza del productor: el traceparent viaja en las cabeceras del mensaje.
+                    using var actividad = Observabilidad.IniciarConsumo(envelope.Type, evento.BasicProperties.Headers);
                     ProcesarMensaje(envelope);
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error procesando mensaje: {ex.Message}");
+                Log.Error(ex, "Error procesando mensaje");
             }
             finally
             {
@@ -73,7 +76,7 @@ public static class RabbitMqConsumer
         await canal.BasicConsumeAsync(nombreCola, autoAck: false, consumidor);
         _conectado = true;
 
-        Console.WriteLine("Escuchando eventos: empleado.creado, empleado.actualizado, empleado.retirado");
+        Log.Information("Escuchando eventos: empleado.creado, empleado.actualizado, empleado.retirado");
     }
 
     /// <summary>
@@ -82,6 +85,6 @@ public static class RabbitMqConsumer
     private static void ProcesarMensaje(EventoEnvelope envelope)
     {
         using var almacen = new AlmacenPerfilesSqlite(Db.ObtenerConexion());
-        new ProcesadorEventos(almacen, Console.WriteLine).Procesar(envelope);
+        new ProcesadorEventos(almacen, mensaje => Log.Information("{Mensaje}", mensaje)).Procesar(envelope);
     }
 }

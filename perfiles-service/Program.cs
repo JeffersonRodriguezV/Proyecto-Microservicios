@@ -1,6 +1,27 @@
 using Microsoft.OpenApi;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using Prometheus;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Reto 8 ---------------------------------------------------------------------------------------
+// Logs JSON con traceId (Serilog)
+builder.Host.UseSerilog((_, cfg) => Observabilidad.ConfigurarLogs(cfg));
+
+// Trazas: OpenTelemetry con exportador Zipkin y propagación W3C (traceparent).
+// El paquete Zipkin está marcado obsoleto a favor de OTLP, pero el Reto pide Zipkin.
+#pragma warning disable CS0618
+builder.Services.AddOpenTelemetry().WithTracing(t => t
+    .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(
+        Environment.GetEnvironmentVariable("OTEL_SERVICE_NAME") ?? Observabilidad.Servicio))
+    .AddAspNetCoreInstrumentation(o => o.Filter = ctx => !Observabilidad.EsRutaSilenciosa(ctx.Request.Path))
+    .AddSource(Observabilidad.Servicio)
+    .AddZipkinExporter(o => o.Endpoint = new Uri(
+        Environment.GetEnvironmentVariable("OTEL_EXPORTER_ZIPKIN_ENDPOINT") ?? "http://zipkin:9411/api/v2/spans")));
+#pragma warning restore CS0618
+// ---------------------------------------------------------------------------------------------
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -29,6 +50,14 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 var app = builder.Build();
+
+// Log por petición (sin /health ni /metrics) y métricas Prometheus (CPU/memoria del proceso + HTTP)
+app.UseSerilogRequestLogging(o => o.GetLevel = (ctx, _, ex) =>
+    ex is null && Observabilidad.EsRutaSilenciosa(ctx.Request.Path)
+        ? Serilog.Events.LogEventLevel.Verbose
+        : Serilog.Events.LogEventLevel.Information);
+app.UseHttpMetrics();
+app.MapMetrics();   // GET /metrics
 
 app.UseSwagger(c => c.RouteTemplate = "perfiles/swagger/{documentName}/swagger.json");
 app.UseSwaggerUI(c =>

@@ -11,6 +11,7 @@ import os
 os.environ.setdefault("DB_URL", "postgresql://localhost:5432/test")
 os.environ.setdefault("DB_USERNAME", "test")
 os.environ.setdefault("DB_PASSWORD", "test")
+os.environ.setdefault("OTEL_SDK_DISABLED", "true")  # sin exportador Zipkin en las pruebas
 
 import pytest
 from fastapi.testclient import TestClient
