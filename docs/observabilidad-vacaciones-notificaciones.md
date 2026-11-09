@@ -54,9 +54,16 @@ Prueba en Docker (broker + Zipkin + servicios):
 
 ### Captura de la traza del inicio de vacaciones
 
-> Pendiente de insertar con el sistema completo levantado: `docs/img/p2-traza-vacaciones.png`
+Traza `603bc4076b86cad1ce966b8a151e8760` en Zipkin: **una sola cascada** desde el scheduler hasta notificaciones, con auth-service (Persona 1) reinyectando el `traceparent`:
 
-Cómo obtenerla: con todo arriba, crear un período con `fechaInicio` de hoy (`POST /vacaciones`), esperar un ciclo del scheduler (60 s) y abrir `http://localhost:9411` → buscar `serviceName=vacaciones-service` → traza que empieza en `scheduler.vacaciones.iniciar`.
+```
+vacaciones-service       scheduler.vacaciones.iniciar               (span raíz, sin padre)
+auth-service             auth-service.eventos receive               (CONSUMER, hijo del scheduler)
+auth-service             ecosistema.eventos/cuenta.desactivada send (PRODUCER)
+notificaciones-service   notificaciones.procesar cuenta.desactivada (CONSUMER)
+```
+
+Reproducción: con la cuenta del empleado ACTIVA, crear un período con `fechaInicio` de hoy y esperar un ciclo del scheduler (60 s). Si la cuenta está en `PENDIENTE_ACTIVACION`, auth ignora el evento y la traza termina ahí.
 
 ![Traza del inicio de vacaciones en Zipkin](img/p2-traza-vacaciones.png)
 
