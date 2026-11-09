@@ -5,11 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"sync/atomic"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // obtenerEnv lee una variable de entorno, o usa el valor por defecto.
@@ -132,6 +135,13 @@ func procesarMensaje(msg amqp.Delivery) {
 		return
 	}
 
+	// Continúa la traza del productor: el `traceparent` viaja en las cabeceras del mensaje.
+	ctx, span := tracer().Start(contextoDelMensaje(msg), "notificaciones.procesar "+envelope.Type,
+		trace.WithSpanKind(trace.SpanKindConsumer))
+	defer span.End()
+	span.SetAttributes(attribute.String("messaging.system", "rabbitmq"),
+		attribute.String("messaging.message.id", envelope.ID), attribute.String("evento.tipo", envelope.Type))
+
 	// Deduplicación: si ya procesamos este id, confirmamos sin repetir el efecto.
 	var existe int
 	err := db.QueryRow("SELECT COUNT(*) FROM eventos_procesados WHERE id = ?", envelope.ID).Scan(&existe)
@@ -155,8 +165,8 @@ func procesarMensaje(msg amqp.Delivery) {
 	guardarNotificacion(db, *notificacion)
 	registrarEventoProcesado(db, envelope.ID)
 
-	fmt.Printf("[NOTIFICACIÓN] Tipo: %s | Para: %s | Mensaje: \"%s\"\n",
-		notificacion.Tipo, notificacion.Destinatario, notificacion.Mensaje)
+	slog.InfoContext(ctx, "notificacion generada", "tipo", notificacion.Tipo,
+		"destinatario", notificacion.Destinatario, "evento", envelope.Type, "mensaje", notificacion.Mensaje)
 
 	msg.Ack(false)
 }
