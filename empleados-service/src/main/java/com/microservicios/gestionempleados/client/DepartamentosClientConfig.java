@@ -19,12 +19,14 @@ public class DepartamentosClientConfig {
     private int timeoutReadMs;
 
     @Bean
-    public RestClient departamentosRestClient() {
+    // Se recibe el RestClient.Builder autoconfigurado (no RestClient.builder()): trae el interceptor de observación
+    // que propaga `traceparent` hacia departamentos-service y mide las llamadas salientes.
+    public RestClient departamentosRestClient(RestClient.Builder builder) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(timeoutConnectMs);
         requestFactory.setReadTimeout(timeoutReadMs);
 
-        return RestClient.builder()
+        return builder
                 .baseUrl(departamentosServiceUrl)
                 .requestFactory(requestFactory)
                 .build();

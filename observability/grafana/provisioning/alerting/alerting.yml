@@ -1,0 +1,97 @@
+apiVersion: 1
+
+# Canal externo: Discord (webhook). La URL viene de la variable DISCORD_WEBHOOK_URL del .env
+contactPoints:
+  - orgId: 1
+    name: discord-equipo
+    receivers:
+      - uid: discord-equipo
+        type: discord
+        settings:
+          url: ${DISCORD_WEBHOOK_URL}
+          title: '[{{ .Status | toUpper }}] {{ .CommonLabels.alertname }}'
+          message: |
+            {{ range .Alerts }}**{{ .Annotations.summary }}**
+            Servicio: {{ .Labels.job }}
+            {{ .Annotations.description }}
+            {{ end }}
+
+policies:
+  - orgId: 1
+    receiver: discord-equipo
+    group_by: ['alertname', 'job']
+    group_wait: 10s
+    group_interval: 1m
+    repeat_interval: 1h
+
+groups:
+  - orgId: 1
+    name: reto8-servicios
+    folder: Reto 8
+    interval: 30s
+    rules:
+      - uid: servicio-caido
+        title: Servicio caído
+        condition: C
+        for: 1m
+        noDataState: Alerting
+        execErrState: Error
+        labels: { severidad: critica }
+        annotations:
+          summary: 'Servicio caído: {{ $labels.job }}'
+          description: 'El servicio lleva más de 1 minuto sin responder al scrape de Prometheus (up == 0).'
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, expr: 'up', instant: true }
+          - refId: B
+            datasourceUid: __expr__
+            model: { refId: B, type: reduce, expression: A, reducer: last }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: B, conditions: [{ evaluator: { type: lt, params: [1] } }] }
+
+      - uid: alta-latencia
+        title: Alta latencia
+        condition: C
+        for: 2m
+        noDataState: OK
+        execErrState: Error
+        labels: { severidad: alta }
+        annotations:
+          summary: 'Alta latencia en {{ $labels.job }}'
+          description: 'La latencia media supera los 2 s durante más de 2 minutos.'
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, expr: 'service:http_latency_avg_seconds:rate1m', instant: true }
+          - refId: B
+            datasourceUid: __expr__
+            model: { refId: B, type: reduce, expression: A, reducer: last }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: B, conditions: [{ evaluator: { type: gt, params: [2] } }] }
+
+      - uid: errores-5xx
+        title: Errores 5xx elevados
+        condition: C
+        for: 2m
+        noDataState: OK
+        execErrState: Error
+        labels: { severidad: alta }
+        annotations:
+          summary: 'Errores 5xx en {{ $labels.job }}'
+          description: 'Más del 5 % de las peticiones responden 5xx durante más de 2 minutos.'
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, expr: 'service:http_errors5xx:ratio1m', instant: true }
+          - refId: B
+            datasourceUid: __expr__
+            model: { refId: B, type: reduce, expression: A, reducer: last }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: B, conditions: [{ evaluator: { type: gt, params: [0.05] } }] }

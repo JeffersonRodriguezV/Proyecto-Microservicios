@@ -20,3 +20,10 @@ groups:
           / sum by (job) (rate(http_request_duration_seconds_count[1m]))
           or sum by (job) (rate(http_server_requests_seconds_sum[1m]))
           / sum by (job) (rate(http_server_requests_seconds_count[1m]))
+
+      # Errores 4xx (peticiones/s). Cada framework nombra la métrica y la etiqueta distinto.
+      - record: service:http_errors4xx:rate1m
+        expr: >
+          sum by (job) (rate(http_requests_total{status=~"4..|4xx"}[1m]))
+          or sum by (job) (rate(http_server_requests_seconds_count{status=~"4.."}[1m]))
+          or sum by (job) (rate(http_requests_received_total{code=~"4.."}[1m]))

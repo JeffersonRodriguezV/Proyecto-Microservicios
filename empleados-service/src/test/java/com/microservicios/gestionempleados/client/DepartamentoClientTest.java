@@ -90,6 +90,6 @@ class DepartamentoClientTest {
         ReflectionTestUtils.setField(config, "timeoutConnectMs", 3000);
         ReflectionTestUtils.setField(config, "timeoutReadMs", 3000);
 
-        assertNotNull(config.departamentosRestClient());
+        assertNotNull(config.departamentosRestClient(RestClient.builder()));
     }
 }

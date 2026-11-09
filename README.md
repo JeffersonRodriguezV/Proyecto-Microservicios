@@ -299,6 +299,7 @@ copia del workspace, el repositorio no se toca.
 - [`docs/arquitectura.md`](docs/arquitectura.md): servicios, decisiones y `/health`.
 - [`docs/eventos.md`](docs/eventos.md): catálogo de eventos y deduplicación.
 - [`docs/observabilidad-vacaciones-notificaciones.md`](docs/observabilidad-vacaciones-notificaciones.md): Reto 8, métricas, logs y trazas de vacaciones y notificaciones (traza del scheduler).
+- [`docs/observabilidad-java-dashboard-alertas.md`](docs/observabilidad-java-dashboard-alertas.md): Reto 8, servicios Java (empleados y auth), dashboard de Grafana y alertas.
 - [`docs/guias/`](docs/guias): despliegue local y ejecución de pruebas.
 - [`scripts/init-db.sql`](scripts/init-db.sql) y [`scripts/seed-data.sql`](scripts/seed-data.sql): esquema de referencia y datos de ejemplo.
 - Swagger agregado de todos los servicios: `http://localhost:8080/swagger`.

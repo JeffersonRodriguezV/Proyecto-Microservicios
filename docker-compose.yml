@@ -403,6 +403,8 @@ services:
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Defina GRAFANA_ADMIN_PASSWORD en .env}
+      # Webhook de Discord para las alertas (provisioning en observability/grafana/provisioning/alerting)
+      DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL:-https://discord.com/api/webhooks/0/CAMBIAR_POR_WEBHOOK_REAL}
     volumes:
       - grafana-data:/var/lib/grafana
       - ./observability/grafana/provisioning/:/etc/grafana/provisioning:ro

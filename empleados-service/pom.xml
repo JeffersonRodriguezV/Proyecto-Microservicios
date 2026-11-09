@@ -159,7 +159,38 @@
 			<artifactId>spring-boot-starter-amqp</artifactId>
 		</dependency>
 
-	</dependencies>
+	
+    <!-- ====================================== -->
+    <!-- OBSERVABILIDAD (Reto 8)                -->
+    <!-- Métricas Prometheus + trazas OpenTelemetry con exportador Zipkin -->
+    <!-- ====================================== -->
+    <dependency>
+        <groupId>io.micrometer</groupId>
+        <artifactId>micrometer-registry-prometheus</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-opentelemetry</artifactId>
+        <exclusions>
+            <!-- Se exporta a Zipkin, no por OTLP: sin estos dos no intenta enviar a localhost:4318 -->
+            <exclusion><groupId>io.opentelemetry</groupId><artifactId>opentelemetry-exporter-otlp</artifactId></exclusion>
+            <exclusion><groupId>io.micrometer</groupId><artifactId>micrometer-registry-otlp</artifactId></exclusion>
+        </exclusions>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-zipkin</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>io.opentelemetry</groupId>
+        <artifactId>opentelemetry-exporter-zipkin</artifactId>
+    </dependency>
+    <!-- Autoconfigura RestClient.Builder (con observación): necesario para propagar traceparent a departamentos -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-restclient</artifactId>
+    </dependency>
+</dependencies>
 
 	<build>
 		<plugins>
