@@ -9,11 +9,10 @@ common:
   ring:
     kvstore:
       store: inmemory
-
-storage:
-  filesystem:
-    chunks_directory: /loki/chunks
-    rules_directory: /loki/rules
+  storage:
+    filesystem:
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules
 
 schema_config:
   configs:
