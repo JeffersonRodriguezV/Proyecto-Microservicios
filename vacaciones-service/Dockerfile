@@ -17,5 +17,8 @@ EXPOSE 8085
 # Si no responde correctamente después de 10 intentos, se marca como unhealthy
 HEALTHCHECK --interval=5s --timeout=3s --retries=10 --start-period=10s \
     CMD wget -qO- http://localhost:8085/health || exit 1
+# Soporte de Docker Secrets: exporta NOMBRE desde NOMBRE_FILE antes de arrancar el servicio
+COPY --chmod=755 entrypoint-secrets.sh /usr/local/bin/entrypoint-secrets.sh
+ENTRYPOINT ["/usr/local/bin/entrypoint-secrets.sh"]
 # Inicia el servidor usando SQLite experimental de Node.js
 CMD ["node", "--experimental-sqlite", "--require", "./src/tracing.js", "src/server.js"]

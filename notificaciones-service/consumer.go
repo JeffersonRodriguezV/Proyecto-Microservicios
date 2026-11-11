@@ -131,6 +131,7 @@ func procesarMensaje(msg amqp.Delivery) {
 	var envelope EventoEnvelope
 	if err := json.Unmarshal(msg.Body, &envelope); err != nil {
 		log.Println("Mensaje con formato inválido, se descarta:", err)
+		notificacionesErrores.WithLabelValues("formato_invalido").Inc()
 		msg.Ack(false)
 		return
 	}
@@ -147,6 +148,7 @@ func procesarMensaje(msg amqp.Delivery) {
 	err := db.QueryRow("SELECT COUNT(*) FROM eventos_procesados WHERE id = ?", envelope.ID).Scan(&existe)
 	if err != nil {
 		log.Println("Error verificando deduplicación:", err)
+		notificacionesErrores.WithLabelValues("deduplicacion").Inc()
 		msg.Nack(false, true)
 		return
 	}
@@ -162,7 +164,9 @@ func procesarMensaje(msg amqp.Delivery) {
 		return
 	}
 
-	guardarNotificacion(db, *notificacion)
+	if guardarNotificacion(db, *notificacion) {
+		notificacionesEnviadas.WithLabelValues(notificacion.Tipo).Inc()
+	}
 	registrarEventoProcesado(db, envelope.ID)
 
 	slog.InfoContext(ctx, "notificacion generada", "tipo", notificacion.Tipo,
@@ -243,14 +247,18 @@ func construirNotificacion(envelope EventoEnvelope) *Notificacion {
 	}
 }
 
-func guardarNotificacion(db *sql.DB, n Notificacion) {
+// guardarNotificacion persiste la notificación y devuelve true si quedó guardada (para la métrica de negocio).
+func guardarNotificacion(db *sql.DB, n Notificacion) bool {
 	_, err := db.Exec(
 		"INSERT INTO notificaciones (id, tipo, destinatario, mensaje, fecha_envio, empleado_id) VALUES (?, ?, ?, ?, ?, ?)",
 		n.ID, n.Tipo, n.Destinatario, n.Mensaje, n.FechaEnvio, n.EmpleadoID,
 	)
 	if err != nil {
 		log.Println("Error guardando notificación:", err)
+		notificacionesErrores.WithLabelValues("guardado").Inc()
+		return false
 	}
+	return true
 }
 
 func registrarEventoProcesado(db *sql.DB, id string) {

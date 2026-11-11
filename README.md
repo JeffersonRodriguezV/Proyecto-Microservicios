@@ -30,7 +30,7 @@ Cliente HTTP (curl, Postman, navegador)
 
 Comunicación síncrona: `empleados-service` → `departamentos-service` (valida el
 departamento) y `vacaciones-service` → `empleados-service` (valida el empleado).
-Al host se publican el Gateway (`8080`), la interfaz del broker (`15672`) y, desde el
+Al host se publican el balanceador de carga (`8080`, que reparte entre las réplicas del Gateway), la interfaz del broker (`15672`) y, desde el
 Reto 8, las interfaces de observabilidad (Grafana `3000`, Prometheus `9091` y Zipkin `9411`);
 el resto usa `expose:` y solo es alcanzable dentro de la red de Docker.
 
@@ -49,44 +49,112 @@ el resto usa `expose:` y solo es alcanzable dentro de la red de Docker.
 
 ## Despliegue
 
-Requisito: Docker Desktop corriendo.
+### Prerrequisitos
+
+| Herramienta | Versión | Para qué |
+|---|---|---|
+| Docker Engine / Docker Desktop | 24 o superior (probado con 29.7) | Ejecutar todo el sistema |
+| Docker Compose | **2.24 o superior** (probado con 5.5) | Se usa `!override` en el override del E2E |
+| Git | 2.30 o superior | Clonar el repositorio |
+| Bash (Linux, macOS, Git Bash) o PowerShell 5.1+ | — | Ejecutar `scripts/setup-secrets` |
+| RAM libre para Docker | 8 GB mínimo (con `GATEWAY_REPLICAS=1` y `EMPLEADOS_REPLICAS=1`), 12 GB recomendado | Sistema + observabilidad + Jenkins |
+| Puertos libres | 8080, 15672, 3000, 9091, 9411, 9090 (y 9000, 5000 con el perfil `ci`) | Balanceador, broker, Grafana, Prometheus, Zipkin, Jenkins |
+
+No hace falta instalar Java, Node, Python, .NET ni Go: todo se compila dentro de Docker.
 
 ```bash
 git clone https://github.com/JeffersonRodriguezV/Proyecto-Microservicios.git
 cd Proyecto-Microservicios
-bash scripts/setup-secrets.sh   # genera .env con secretos aleatorios
+bash scripts/setup-secrets.sh   # genera secrets/ (un archivo por secreto) y .env (solo config)
                                 # Windows: powershell -ExecutionPolicy Bypass -File scripts\setup-secrets.ps1
 docker compose up --build
 ```
 
 ### Secretos y rotación
 
-Ninguna contraseña ni clave está en el repositorio. `.env.example` solo trae marcadores
-(`CHANGE_ME`) y `scripts/setup-secrets.sh` (o `.ps1`) crea `.env` generando un valor
-aleatorio por cada marcador: JWT, RabbitMQ, bases de datos, usuarios semilla y CI.
-`.env` y `secrets/` están en `.gitignore`. Sin esas variables `docker compose` se detiene
-con un mensaje claro: los secretos no tienen valor por defecto.
+Ninguna contraseña ni clave está en el repositorio ni en variables de entorno de los
+contenedores: se usan **Docker Compose Secrets**. `scripts/setup-secrets.sh` (o `.ps1`) crea
+la carpeta `secrets/` con **un archivo por secreto** (`jwt_secret`, `rabbitmq_password`,
+`db_auth_password`, `grafana_admin_password`, `discord_webhook_url`, ...), que Compose monta
+en `/run/secrets/<nombre>` dentro de cada contenedor. `.env` solo conserva configuración no
+secreta. `secrets/` y `.env` están en `.gitignore`; la plantilla sin valores reales está en
+[`secrets.example/`](secrets.example/README.md). Sin esa carpeta `docker compose` se detiene
+indicando qué archivo falta.
 
-- El script es idempotente: no pisa valores que ya existen y solo agrega los que falten.
+Cómo los lee cada servicio: las imágenes oficiales (MySQL, PostgreSQL, Grafana) usan su
+variable `*_FILE`; los siete microservicios incluyen `entrypoint-secrets.sh`, que exporta
+`NOMBRE` desde `NOMBRE_FILE` antes de arrancar, de modo que el código de cada servicio (Java,
+Node, Python, .NET, Go) no cambia. RabbitMQ y SonarQube leen el secreto en su `entrypoint`;
+Jenkins (JCasC) y Grafana (`$__file{}`) lo leen directamente del archivo.
+
+- El script es idempotente: conserva los secretos existentes y, si hay un `.env` de una versión
+  anterior, **migra** sus valores (así no se rompen las bases de datos ya creadas).
 - **Rotar**: `bash scripts/setup-secrets.sh --rotate` (`-Rotar` en PowerShell). Las bases de
   datos y RabbitMQ guardan la clave anterior en sus volúmenes, así que después hay que
   recrearlos: `docker compose down -v && docker compose up --build` (borra los datos locales).
-- `SONAR_TOKEN` se genera en SonarQube (Mi cuenta > Seguridad) y se pega a mano en `.env`.
-- **CI**: la credencial `env-sistema` de Jenkins (archivo secreto) debe ser el `.env` generado.
-  Tras actualizar `.env.example`, vuelva a subirla o los pipelines fallarán por variables faltantes.
+- `sonar_token` se genera en SonarQube (Mi cuenta > Seguridad) y se pega en `secrets/sonar_token`;
+  el webhook real de Discord va en `secrets/discord_webhook_url`.
+- **CI**: la credencial `env-sistema` de Jenkins es `secrets/secrets.env` (los mismos secretos
+  en formato `CLAVE=valor`), que el script genera y Jenkins monta de solo lectura. El pipeline
+  E2E la copia como `.env` y su override (`docker-compose.e2e.yml`) lee los secretos de esas variables,
+  porque dentro de Jenkins no hay carpeta `secrets/` visible para el Docker del host.
+- Los archivos de `secrets/` quedan con permisos `644` para que los contenedores que no son
+  root puedan leerlos; es una concesión de desarrollo local, la carpeta nunca se sube a Git.
 
 En otra terminal, `docker compose ps` debe mostrar los **11 contenedores**
-`healthy`. URL base de todo el sistema: `http://localhost:8080`. Interfaz del
-broker: `http://localhost:15672` (usuario `admin`, contraseña `admin`).
+`healthy` (Jenkins incluido). URL base de todo el sistema: `http://localhost:8080` (balanceador). Interfaz del
+broker: `http://localhost:15672` (usuario `admin`, contraseña en `secrets/rabbitmq_password`).
 
 - Detener conservando los datos: `docker compose down`
 - Reiniciar desde cero (borra todos los datos): `docker compose down -v`
 
+### Accesos por defecto
+
+| Qué | URL | Usuario | Clave |
+|---|---|---|---|
+| API (balanceador) | http://localhost:8080 | `admin@empresa.com` / `user@empresa.com` | `secrets/admin_password` / `secrets/seed_user_password` |
+| Swagger agregado | http://localhost:8080/swagger | — | pública |
+| RabbitMQ (UI) | http://localhost:15672 | `admin` | `secrets/rabbitmq_password` |
+| Grafana | http://localhost:3000 | `admin` | `secrets/grafana_admin_password` |
+| Prometheus | http://localhost:9091 | — | sin autenticación (solo local) |
+| Zipkin | http://localhost:9411 | — | sin autenticación (solo local) |
+| Jenkins | http://localhost:9090 | `admin` (`JENKINS_ADMIN_ID`) | `secrets/jenkins_admin_password` |
+| SonarQube (perfil `ci`) | http://localhost:9000 | `admin` | `admin` en el primer acceso; cámbiela |
+
+### Ejemplos con curl
+
+```bash
+# 1) Iniciar sesión como administrador y guardar el token (Linux/macOS/Git Bash)
+ADMIN_PASS=$(cat secrets/admin_password)
+TOKEN=$(curl -s -X POST http://localhost:8080/auth/login -H "Content-Type: application/json" \
+  -d "{\"email\":\"admin@empresa.com\",\"password\":\"$ADMIN_PASS\"}" | sed -E 's/.*"accessToken":"([^"]+)".*/\1/')
+
+# 2) Crear un departamento y un empleado (esto dispara el flujo de onboarding por eventos)
+curl -s -X POST http://localhost:8080/departamentos -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"id":"TI","nombre":"Tecnologia","descripcion":"Area de TI"}'
+curl -s -X POST http://localhost:8080/empleados -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"nombre":"Ana","apellido":"Perez","email":"ana@empresa.com","numeroEmpleado":"EMP-001","cargo":"Desarrolladora","area":"TI","departamentoId":"TI","fechaIngreso":"2026-01-15"}'
+
+# 3) Consultar el resultado: el perfil y la notificación de bienvenida (reemplace 1 por el id devuelto)
+curl -s http://localhost:8080/empleados            -H "Authorization: Bearer $TOKEN"
+curl -s http://localhost:8080/perfiles/1           -H "Authorization: Bearer $TOKEN"
+curl -s http://localhost:8080/notificaciones/1     -H "Authorization: Bearer $TOKEN"
+
+# 4) Offboarding: retirar al empleado (baja lógica) y revisar sus notificaciones
+curl -s -X DELETE "http://localhost:8080/empleados/1?motivo=RENUNCIA" -H "Authorization: Bearer $TOKEN"
+
+# Salud del sistema (pública)
+curl -s http://localhost:8080/health
+```
+
+Los ejemplos van sin tildes a propósito: Git Bash en Windows envía mal los acentos con `curl -d` y el servidor responde `400`.
+En PowerShell use `Get-Content secrets\admin_password -Raw` para la clave y `Invoke-RestMethod` en lugar de `curl`.
+
 ### Administrador semilla
 
 Al arrancar, `auth-service` crea el usuario administrador:
-`admin@empresa.com` con la contraseña de la variable `ADMIN_PASSWORD`
-(por defecto `Admin123!`, solo para uso académico).
+`admin@empresa.com` con la contraseña del secreto `secrets/admin_password`
+(generada por `scripts/setup-secrets`).
 
 ## Seguridad (Reto 5)
 
@@ -226,33 +294,71 @@ producer, data}` y se publican en el exchange `ecosistema.eventos` (tipo
 `topic`), con el nombre del evento como routing key. Cada consumidor tiene su
 propia cola durable.
 
+## Escalabilidad y resiliencia
+
+- **Balanceador de carga (Traefik, contenedor `lb`).** Es el único punto de entrada
+  (`http://localhost:8080`). Descubre las réplicas por etiquetas de Docker, les hace health check
+  a `/health` cada 5 s y retira del reparto a la que falla; si una conexión no se puede abrir,
+  reintenta en otra réplica. Un segundo puerto **interno** (`lb:8088`) balancea `empleados-service`
+  para el gateway y `vacaciones-service`.
+- **Escalado horizontal.** `api-gateway` y `empleados-service` son *stateless* (el estado está en
+  MySQL y en el broker) y corren con **2 réplicas** por defecto: `GATEWAY_REPLICAS` y
+  `EMPLEADOS_REPLICAS` en `.env` lo cambian (con poca RAM, `=1`), o `docker compose up -d --scale api-gateway=3`.
+  Por eso esos dos servicios no tienen `container_name`. No se replican los servicios con SQLite
+  (perfiles, notificaciones, vacaciones): un archivo SQLite no se comparte entre instancias.
+- **Prometheus** descubre cada réplica por DNS (`dns_sd_configs`) y las métricas se agregan por servicio.
+- **Timeouts, reintentos y circuit breaker.** El gateway corta con `503` a un servicio que no responde en
+  `PROXY_TIMEOUT_MS` (15 s). `empleados-service` → `departamentos-service` usa 4 reintentos con espera creciente
+  y un circuit breaker (Resilience4j) cuyo *fallback* acepta al empleado como «pendiente de validar»
+  (`departamentoValidado=false`) y lo reconcilia después.
+- **Prueba realizada** (con 2 réplicas de cada una): se detuvieron `api-gateway-1` y `empleados-service-1` en pleno tráfico y de
+  120 peticiones respondieron 118; los 2 fallos fueron en el instante de la caída y, tras ~5 s de health check, 0 errores. Con
+  `departamentos-service` detenido, crear empleados devuelve `200` por el fallback (cada uno tarda ~10 s por los reintentos).
+- **Limitación conocida:** cada réplica de `empleados-service` lleva su propio circuit breaker, así que con varias réplicas
+  el circuito tarda más en abrirse (cada una necesita sus propias 3 llamadas fallidas).
+
+## Métricas de negocio
+
+Además de las métricas técnicas (tráfico, latencia, errores HTTP), el sistema expone contadores de negocio, graficados en la fila
+«Métricas de negocio» del dashboard de Grafana:
+
+| Métrica | Servicio | Significado |
+|---|---|---|
+| `empleados_creados_total` | empleados-service | Empleados dados de alta con éxito |
+| `empleados_retirados_total` | empleados-service | Empleados dados de baja con éxito |
+| `empleados_operaciones_rechazadas_total{operacion}` | empleados-service | Altas/bajas rechazadas por una regla de negocio (duplicados, inexistente...) |
+| `notificaciones_enviadas_total{tipo}` | notificaciones-service | Notificaciones generadas, por tipo (CUENTA, SEGURIDAD, VACACIONES, DESVINCULACION) |
+| `notificaciones_errores_total{causa}` | notificaciones-service | Errores al procesar o guardar una notificación |
+
 ## Integración continua (Reto 7)
 
 Cada servicio tiene un pipeline declarativo en Jenkins que compila, prueba,
 mide cobertura, valida la calidad en SonarQube, publica la imagen Docker y
-ejecuta la suite E2E (BDD). El CI vive en su propio compose
-(`docker-compose.ci.yml`), separado del sistema (`docker-compose.yml`): el CI
-es infraestructura de desarrollo y no debe arrancar con el sistema. Detalle de
+ejecuta la suite E2E (BDD). Jenkins forma parte de `docker-compose.yml` y arranca
+con el sistema (`docker compose up --build`); SonarQube y el registry, que consumen
+mucha RAM, solo arrancan con el perfil `ci` (`docker compose --profile ci up -d`).
+El pipeline E2E corre en un proyecto Compose aparte (`-p e2e`) que no incluye los
+servicios de CI, de modo que su `down -v` nunca toca a Jenkins. Detalle de
 convenciones en [`docs/convencion-ci.md`](docs/convencion-ci.md).
 
 ### Acceso
-- Jenkins: http://localhost:9090 (usuario y clave: `JENKINS_ADMIN_ID` / `JENKINS_ADMIN_PASSWORD` del `.env`).
+- Jenkins: http://localhost:9090 (usuario `JENKINS_ADMIN_ID` del `.env`; clave en `secrets/jenkins_admin_password`).
   No hay contraseña inicial aleatoria que buscar: el asistente de configuración está desactivado
-  (`runSetupWizard=false`) y el administrador lo crea JCasC con esas dos variables. Los valores los
-  genera `scripts/setup-secrets` en su `.env`.
-- SonarQube: http://localhost:9000 (usuario `admin`, clave `SONAR_ADMIN_PASSWORD` del `.env`).
+  (`runSetupWizard=false`) y el administrador lo crea JCasC con ese usuario y esa clave. Los valores los
+  genera `scripts/setup-secrets`.
+- SonarQube: http://localhost:9000 (usuario `admin`, clave inicial de SonarQube, cámbiela en el primer acceso).
 - Registry local de imágenes: `localhost:5000`.
 
 ### Puesta en marcha
-a. Crear los `.env` (`cp .env.example .env`, `cp e2e-tests/.env.example e2e-tests/.env`) y ajustar claves.
-b. `docker compose -f docker-compose.ci.yml up -d`.
-c. En SonarQube: Quality Gate `cobertura-70` por defecto, token en `SONAR_TOKEN` y webhook `http://jenkins:8080/sonarqube-webhook/`.
+a. Ejecutar `scripts/setup-secrets` (crea `.env`, `secrets/` y `e2e-tests/.env`).
+b. `docker compose --profile ci up -d` (Jenkins ya sube con el sistema; el perfil `ci` añade SonarQube y el registry).
+c. En SonarQube: Quality Gate `cobertura-70` por defecto, token en `secrets/sonar_token` y webhook `http://jenkins:8080/sonarqube-webhook/`.
 d. Recrear Jenkins (`up -d --force-recreate jenkins`). Los jobs ya existen (JCasC los importa al arrancar);
-   para ejecutar uno a mano: Jenkins → job (`empleados-service`, `vacaciones-service` o `e2e-bdd`) →
+   para ejecutar uno a mano: Jenkins → cualquiera de los 8 jobs (`empleados-service`, `auth-service`, `api-gateway`, `departamentos-service`, `perfiles-service`, `notificaciones-service`, `vacaciones-service` o `e2e-bdd`) →
    *Build Now* (en los servicios, *Build with Parameters* permite desmarcar `RUN_SONAR`).
 
 Jenkins se configura solo (JCasC + Job DSL en `jenkins/casc/`): credenciales
-`sonar-token`, `env-sistema` y `env-e2e`, servidor Sonar y los tres jobs. Guía
+`sonar-token`, `env-sistema` y `env-e2e`, servidor Sonar y los 8 jobs (uno por cada uno de los 7 servicios más `e2e-bdd`). Guía
 completa y problemas conocidos: [`docs/guia-reproducibilidad-ci.md`](docs/guia-reproducibilidad-ci.md).
 
 ### Etapas del pipeline
@@ -333,7 +439,7 @@ flowchart LR
 
 | Componente | Imagen | Acceso desde el host | Para qué |
 |---|---|---|---|
-| Grafana | `grafana/grafana:11.3.0` | http://localhost:3000 (`admin` / `GRAFANA_ADMIN_PASSWORD` del `.env`) | Dashboard, exploración de logs y trazas, alertas |
+| Grafana | `grafana/grafana:11.3.0` | http://localhost:3000 (`admin` / clave en `secrets/grafana_admin_password`) | Dashboard, exploración de logs y trazas, alertas |
 | Prometheus | `prom/prometheus:v2.55.1` | http://localhost:9091 (el 9090 lo usa Jenkins) | Recolecta métricas y evalúa reglas (`observability/prometheus/`) |
 | Zipkin | `openzipkin/zipkin:3.4.2` | http://localhost:9411 | Almacena y muestra las trazas |
 | Loki | `grafana/loki:3.2.1` | solo red interna (`loki:3100`) | Almacena los logs |
@@ -407,6 +513,7 @@ Dashboard **"Reto 8 - Observabilidad del sistema"** (carpeta "Reto 8", UID `reto
 
 - **Resumen del sistema:** un panel por servicio con el estado (`up`): verde UP, rojo DOWN.
 - **Comportamiento del tráfico:** tasa de peticiones por servicio, latencia media por servicio, errores 4xx (peticiones/s) y errores 5xx (% de peticiones).
+- **Métricas de negocio:** empleados creados/retirados, notificaciones enviadas por tipo y errores de negocio (ver [Métricas de negocio](#métricas-de-negocio)).
 
 ### Logs con Loki
 
@@ -428,11 +535,11 @@ Las alertas se envían a un canal de Discord mediante un *webhook*, configurado 
 
 **Cómo configurarlo:**
 1. En Discord: canal → *Editar canal* → *Integraciones* → *Webhooks* → *Nuevo webhook* → *Copiar URL del webhook*.
-2. Agregarla al `.env` (nunca al repositorio): `DISCORD_WEBHOOK_URL=<url>`.
-3. Recrear Grafana, que solo lee la variable al arrancar: `docker compose up -d --no-deps --force-recreate grafana`.
+2. Guardarla en `secrets/discord_webhook_url` (nunca al repositorio; un archivo con la URL y sin salto de línea).
+3. Recrear Grafana, que solo lee el secreto al arrancar: `docker compose up -d --no-deps --force-recreate grafana`.
 4. Probar en Grafana → *Alerting* → *Contact points* → `discord-equipo` → *Test*.
 
-Si `DISCORD_WEBHOOK_URL` no está definida, Grafana arranca igual con una URL de relleno y las alertas no llegan a ningún canal.
+Si el secreto conserva la URL de relleno, Grafana arranca igual y las alertas no llegan a ningún canal.
 
 | Regla | Condición | Duración | Severidad |
 |---|---|---|---|

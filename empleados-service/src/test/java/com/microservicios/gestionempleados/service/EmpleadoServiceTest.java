@@ -13,6 +13,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import com.microservicios.gestionempleados.metricas.MetricasNegocio;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -46,6 +47,8 @@ class EmpleadoServiceTest {
     private DepartamentoValidador departamentoValidador;
     @Mock
     private EventoPublisher eventoPublisher;
+    @Mock
+    private MetricasNegocio metricas;
 
     @InjectMocks
     private EmpleadoService servicio;
@@ -136,6 +139,30 @@ class EmpleadoServiceTest {
             assertEquals("El departamentoId 'DEP-1' no existe", ex.getMessage());
             verify(empleadoRepository, never()).save(any());
             verifyNoInteractions(eventoPublisher);
+        }
+
+        @Test
+        @DisplayName("métricas: una creación exitosa cuenta un empleado creado y ningún rechazo")
+        void metricaCreacionExitosa() {
+            when(departamentoValidador.consultarExistencia("DEP-1"))
+                    .thenReturn(DepartamentoValidacionResultado.EXISTE);
+            repositorioGuardaTalCual();
+
+            servicio.crearEmpleado(nuevoEmpleado());
+
+            verify(metricas).empleadoCreado();
+            verify(metricas, never()).operacionRechazada(any());
+        }
+
+        @Test
+        @DisplayName("métricas: una creación rechazada cuenta un rechazo y no un empleado creado")
+        void metricaCreacionRechazada() {
+            when(empleadoRepository.existsByEmail("ana@empresa.com")).thenReturn(true);
+
+            assertThrows(IllegalArgumentException.class, () -> servicio.crearEmpleado(nuevoEmpleado()));
+
+            verify(metricas).operacionRechazada("crear");
+            verify(metricas, never()).empleadoCreado();
         }
 
         @Test
@@ -321,6 +348,17 @@ class EmpleadoServiceTest {
     @Nested
     @DisplayName("retirarEmpleado")
     class RetirarEmpleado {
+
+        @Test
+        @DisplayName("métricas: retirar un empleado inexistente cuenta un rechazo 'retirar'")
+        void metricaRetiroRechazado() {
+            when(empleadoRepository.findById(98)).thenReturn(java.util.Optional.empty());
+
+            assertThrows(IllegalArgumentException.class, () -> servicio.retirarEmpleado(98, "RENUNCIA"));
+
+            verify(metricas).operacionRechazada("retirar");
+            verify(metricas, never()).empleadoRetirado();
+        }
 
         @Test
         @DisplayName("error si el empleado no existe")

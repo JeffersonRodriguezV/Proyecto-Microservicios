@@ -7,13 +7,19 @@ rule_files:
 scrape_configs:
   - job_name: 'api-gateway'
     metrics_path: /metrics
-    static_configs:
-      - targets: ['api-gateway:8080']
+    dns_sd_configs:                    # una réplica por registro A del servicio
+      - names: ['api-gateway']
+        type: A
+        port: 8080
+        refresh_interval: 10s
 
   - job_name: 'empleados-service'
     metrics_path: /actuator/prometheus
-    static_configs:
-      - targets: ['empleados-service:8080']
+    dns_sd_configs:
+      - names: ['empleados-service']
+        type: A
+        port: 8080
+        refresh_interval: 10s
 
   - job_name: 'departamentos-service'
     metrics_path: /metrics

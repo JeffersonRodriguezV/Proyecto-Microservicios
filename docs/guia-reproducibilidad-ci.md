@@ -17,7 +17,7 @@ verdes, Quality Gate OK e imágenes publicadas en `localhost:5000`.
    los convierte en las credenciales `env-sistema` y `env-e2e`):
    - `cp .env.example .env` (ajustar `JENKINS_ADMIN_PASSWORD`, `SONAR_ADMIN_PASSWORD`).
    - `cp e2e-tests/.env.example e2e-tests/.env`
-3. `docker compose -f docker-compose.ci.yml up -d` y esperar a que Sonar esté
+3. `docker compose --profile ci up -d` y esperar a que Sonar esté
    `UP` (http://localhost:9000).
 4. Configurar SonarQube (una sola vez, vía UI o API):
    - Cambiar la clave de `admin` por `SONAR_ADMIN_PASSWORD`.
@@ -26,7 +26,7 @@ verdes, Quality Gate OK e imágenes publicadas en `localhost:5000`.
    - Crear un token de usuario y ponerlo en `.env` como `SONAR_TOKEN`.
    - Webhook: nombre `jenkins`, URL `http://jenkins:8080/sonarqube-webhook/`.
 5. Recrear Jenkins para que lea el token:
-   `docker compose -f docker-compose.ci.yml up -d --force-recreate jenkins`
+   `docker compose --profile ci up -d --force-recreate jenkins`
 6. Entrar a http://localhost:9090 (usuario/clave de `.env`), comprobar que
    existen las credenciales `sonar-token`, `env-sistema`, `env-e2e` y los jobs
    `empleados-service`, `vacaciones-service`, `e2e-bdd`.
@@ -36,7 +36,7 @@ verdes, Quality Gate OK e imágenes publicadas en `localhost:5000`.
 | Problema | Causa | Solución en el repo |
 |---|---|---|
 | Fallo "Could not find credentials entry with ID 'env-sistema'" tras reiniciar | JCasC borra las credenciales creadas a mano | Credenciales `file:` declaradas en `jenkins/casc/jenkins.yaml` desde `.env` montados |
-| Fallo "network ... not found" | El nombre de la red dependía de la carpeta | `name:` fijo en `docker-compose.ci.yml` |
+| Fallo "network ... not found" | El nombre de la red dependía de la carpeta | `name:` fijo en `docker-compose.yml` |
 | Jobs nuevos no aparecen en un Jenkins ya levantado | Job DSL solo corre al iniciar | *Manage Jenkins → Reload Configuration from Disk* |
 | `buildWithParameters` responde 400 tras reiniciar | El job aún no conoce sus parámetros | Lanzar una vez con *Build Now*; después ya es parametrizado |
 | Quality Gate con condiciones extra | Gate copiado del por defecto | Dejar solo `coverage` y `new_coverage` < 70 |

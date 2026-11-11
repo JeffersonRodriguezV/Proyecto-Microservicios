@@ -2,6 +2,26 @@
 # Reemplaza los bind mounts de scripts SQL (que no existen en el host) por volumenes
 # que el pipeline llena antes de levantar el sistema.
 services:
+  # El E2E corre dentro de Jenkins: no debe levantar (ni tocar) Jenkins, SonarQube ni el registry.
+  # Con un perfil que nadie activa, Compose los ignora en este proyecto.
+  jenkins:
+    profiles: ["ci-no-e2e"]
+  sonarqube:
+    profiles: ["ci-no-e2e"]
+  sonar-db:
+    profiles: ["ci-no-e2e"]
+  registry:
+    profiles: ["ci-no-e2e"]
+  # La observabilidad monta archivos de configuracion del workspace (invisibles para el Docker del host)
+  # y el E2E solo prueba el sistema por HTTP: tampoco se levanta aqui.
+  prometheus:
+    profiles: ["ci-no-e2e"]
+  loki:
+    profiles: ["ci-no-e2e"]
+  promtail:
+    profiles: ["ci-no-e2e"]
+  grafana:
+    profiles: ["ci-no-e2e"]
   db-auth:
     volumes:
       - e2e_init_auth:/docker-entrypoint-initdb.d:ro
@@ -21,6 +41,33 @@ services:
       timeout: 5s
       retries: 24
       start_period: 60s
+
+  # Dentro de Jenkins no hay carpeta secrets/ visible para el Docker del host (los bind mounts apuntarían
+  # a rutas del contenedor). Por eso en el E2E los secretos se leen de variables de entorno: Compose las toma
+  # del .env que el pipeline copia desde la credencial env-sistema (archivo secrets/secrets.env).
+secrets:
+  jwt_secret: !override
+    environment: JWT_SECRET
+  admin_password: !override
+    environment: ADMIN_PASSWORD
+  seed_user_password: !override
+    environment: SEED_USER_PASSWORD
+  rabbitmq_password: !override
+    environment: RABBITMQ_PASSWORD
+  db_empleados_password: !override
+    environment: DB_EMPLEADOS_PASSWORD
+  db_empleados_root_password: !override
+    environment: DB_EMPLEADOS_ROOT_PASSWORD
+  db_auth_password: !override
+    environment: DB_AUTH_PASSWORD
+  db_auth_root_password: !override
+    environment: DB_AUTH_ROOT_PASSWORD
+  db_departamentos_password: !override
+    environment: DB_DEPARTAMENTOS_PASSWORD
+  grafana_admin_password: !override
+    environment: GRAFANA_ADMIN_PASSWORD
+  discord_webhook_url: !override
+    environment: DISCORD_WEBHOOK_URL
 
 volumes:
   e2e_init_auth:

@@ -24,5 +24,9 @@ EXPOSE 8080
 HEALTHCHECK --interval=5s --timeout=3s --retries=10 --start-period=5s \
     CMD node -e "require('http').get('http://localhost:' + (process.env.PORT || 8080) + '/health', res => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
 
+# Soporte de Docker Secrets: exporta NOMBRE desde NOMBRE_FILE antes de arrancar el servicio
+COPY --chmod=755 entrypoint-secrets.sh /usr/local/bin/entrypoint-secrets.sh
+ENTRYPOINT ["/usr/local/bin/entrypoint-secrets.sh"]
+
 # --require carga OpenTelemetry ANTES que Express para instrumentar el HTTP entrante y saliente
 CMD ["node", "--require", "./src/tracing.js", "src/server.js"]

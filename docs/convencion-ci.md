@@ -15,7 +15,7 @@ versionado junto a su código y un job definido como código en `jenkins/casc/jo
 | Red Docker compartida | `proyecto-microservicios_microservices-network` | agentes que hablan con Sonar o con el sistema |
 | Quality Gate | `cobertura-70` | Quality Gate por defecto de Sonar (aplica a todos los proyectos) |
 | Clave de proyecto Sonar | igual al nombre del servicio (`vacaciones-service`, `empleados-service`) | `sonar-project.properties` / `pom.xml` |
-| Puertos | Jenkins `9090`, SonarQube `9000`, Registry `5000` | `docker-compose.ci.yml` |
+| Puertos | Jenkins `9090`, SonarQube `9000`, Registry `5000` | `docker-compose.yml` (perfil `ci`) |
 
 ## 2. Etapas y orden
 

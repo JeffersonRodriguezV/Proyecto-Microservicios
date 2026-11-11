@@ -152,7 +152,7 @@ y Compose abortaba con `container message-broker is unhealthy`. La suite BDD nun
 
 ## 8. Cómo ejecutarlo
 
-1. Levantar Jenkins y SonarQube con `docker compose -f docker-compose.ci.yml up -d`.
+1. Levantar Jenkins y SonarQube con `docker compose --profile ci up -d`.
 2. Entrar en `http://localhost:9090` (usuario y clave de `JENKINS_ADMIN_ID` y `JENKINS_ADMIN_PASSWORD` del `.env`).
 3. Abrir el job `vacaciones-service` → **Build with Parameters** → **Build**. Dejar `RUN_SONAR` marcado.
 4. Consultar **Test Result**, **Coverage Report** y el dashboard de Sonar.

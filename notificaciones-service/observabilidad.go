@@ -37,11 +37,19 @@ var (
 		Name: "http_request_duration_seconds", Help: "Latencia HTTP", Buckets: prometheus.DefBuckets,
 	}, []string{"method", "status"})
 	registro = prometheus.NewRegistry()
+
+	// Métricas de NEGOCIO: cuántas notificaciones generó el sistema y cuántas fallaron al procesarse.
+	notificacionesEnviadas = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "notificaciones_enviadas_total", Help: "Notificaciones generadas y guardadas, por tipo",
+	}, []string{"tipo"})
+	notificacionesErrores = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "notificaciones_errores_total", Help: "Errores al procesar o guardar notificaciones, por causa",
+	}, []string{"causa"})
 )
 
 func init() {
 	// CPU y memoria del proceso (process_*) y del runtime de Go (go_*).
-	registro.MustRegister(peticiones, duracion)
+	registro.MustRegister(peticiones, duracion, notificacionesEnviadas, notificacionesErrores)
 	registro.MustRegister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
 	registro.MustRegister(prometheus.NewGoCollector())
 }
