@@ -12,6 +12,16 @@ services:
     profiles: ["ci-no-e2e"]
   registry:
     profiles: ["ci-no-e2e"]
+  # La observabilidad monta archivos de configuracion del workspace (invisibles para el Docker del host)
+  # y el E2E solo prueba el sistema por HTTP: tampoco se levanta aqui.
+  prometheus:
+    profiles: ["ci-no-e2e"]
+  loki:
+    profiles: ["ci-no-e2e"]
+  promtail:
+    profiles: ["ci-no-e2e"]
+  grafana:
+    profiles: ["ci-no-e2e"]
   db-auth:
     volumes:
       - e2e_init_auth:/docker-entrypoint-initdb.d:ro
