@@ -117,7 +117,7 @@ pipeline {
             agent any
             options { lock('e2e-sistema') }
             environment {
-                COMPOSE = 'docker compose -f docker-compose.yml -f docker-compose.e2e.yml'
+                COMPOSE = 'docker compose -p e2e -f docker-compose.yml -f docker-compose.e2e.yml'
             }
             steps {
                 // El E2E necesita TODO el repositorio (compose y los demás servicios), no solo vacaciones
