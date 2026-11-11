@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/prometheus/client_golang/prometheus"
+	dto "github.com/prometheus/client_model/go"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -140,4 +142,40 @@ func TestErroresDeEscrituraSeRegistranSinCaer(t *testing.T) {
 	// Con la BD cerrada ambas funciones solo registran el error en el log (no hacen panic).
 	guardarNotificacion(db, Notificacion{ID: "x"})
 	registrarEventoProcesado(db, "x")
+}
+
+// valorContador lee el valor actual de un contador de Prometheus (para verificar las métricas de negocio).
+func valorContador(t *testing.T, c prometheus.Counter) float64 {
+	t.Helper()
+	var m dto.Metric
+	if err := c.Write(&m); err != nil {
+		t.Fatal(err)
+	}
+	return m.GetCounter().GetValue()
+}
+
+func TestMetricasDeNegocioContadasAlGuardar(t *testing.T) {
+	prepararDB(t)
+	antesOk := valorContador(t, notificacionesEnviadas.WithLabelValues("CUENTA"))
+	antesError := valorContador(t, notificacionesErrores.WithLabelValues("guardado"))
+
+	// Guardado correcto: no se cuenta aquí (la métrica de éxito se incrementa en procesarMensaje)...
+	if !guardarNotificacion(db, Notificacion{ID: "m1", Tipo: "CUENTA"}) {
+		t.Fatal("guardarNotificacion debería devolver true con la BD sana")
+	}
+	if valorContador(t, notificacionesErrores.WithLabelValues("guardado")) != antesError {
+		t.Error("un guardado correcto no debe contar error")
+	}
+
+	// ...pero un fallo de guardado sí cuenta un error de causa "guardado" y devuelve false.
+	db.Close()
+	if guardarNotificacion(db, Notificacion{ID: "m2", Tipo: "CUENTA"}) {
+		t.Fatal("guardarNotificacion debería devolver false con la BD cerrada")
+	}
+	if valorContador(t, notificacionesErrores.WithLabelValues("guardado")) != antesError+1 {
+		t.Error("el fallo de guardado debe incrementar notificaciones_errores_total{causa=guardado}")
+	}
+	if valorContador(t, notificacionesEnviadas.WithLabelValues("CUENTA")) != antesOk {
+		t.Error("un fallo no debe contar como notificación enviada")
+	}
 }

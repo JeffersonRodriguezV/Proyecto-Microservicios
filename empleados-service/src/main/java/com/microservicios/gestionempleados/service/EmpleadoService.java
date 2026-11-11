@@ -3,6 +3,7 @@ package com.microservicios.gestionempleados.service;
 import com.microservicios.gestionempleados.client.DepartamentoValidador;
 import com.microservicios.gestionempleados.client.DepartamentoValidacionResultado;
 import com.microservicios.gestionempleados.eventos.EventoPublisher;
+import com.microservicios.gestionempleados.metricas.MetricasNegocio;
 import com.microservicios.gestionempleados.model.Empleado;
 import com.microservicios.gestionempleados.model.enume.EstadoEmpleado;
 import com.microservicios.gestionempleados.repository.EmpleadoRepository;
@@ -24,15 +25,18 @@ public class EmpleadoService {
     private final EmpleadoRepository empleadoRepository;
     private final DepartamentoValidador departamentoValidador;
     private final EventoPublisher eventoPublisher;
+    private final MetricasNegocio metricas;
 
     public EmpleadoService(
             EmpleadoRepository empleadoRepository,
             DepartamentoValidador departamentoValidador,
-            EventoPublisher eventoPublisher
+            EventoPublisher eventoPublisher,
+            MetricasNegocio metricas
     ) {
         this.empleadoRepository = empleadoRepository;
         this.departamentoValidador = departamentoValidador;
         this.eventoPublisher = eventoPublisher;
+        this.metricas = metricas;
     }
 
     /**
@@ -40,6 +44,17 @@ public class EmpleadoService {
      * persistir exitosamente.
      */
     public Empleado crearEmpleado(Empleado empleado) {
+        try {
+            Empleado creado = procesarCreacion(empleado);
+            metricas.empleadoCreado();
+            return creado;
+        } catch (IllegalArgumentException e) {
+            metricas.operacionRechazada("crear");   // regla de negocio incumplida (duplicado, departamento inexistente...)
+            throw e;
+        }
+    }
+
+    private Empleado procesarCreacion(Empleado empleado) {
         if (empleadoRepository.existsByEmail(empleado.getEmail())) {
             throw new IllegalArgumentException("El email ya está registrado");
         }
@@ -134,6 +149,17 @@ public class EmpleadoService {
      * Publica empleado.retirado tras guardar exitosamente.
      */
     public Empleado retirarEmpleado(int id, String motivo) {
+        try {
+            Empleado retirado = procesarRetiro(id, motivo);
+            metricas.empleadoRetirado();
+            return retirado;
+        } catch (IllegalArgumentException e) {
+            metricas.operacionRechazada("retirar");
+            throw e;
+        }
+    }
+
+    private Empleado procesarRetiro(int id, String motivo) {
         Empleado empleado = empleadoRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "El empleado con id " + id + " no existe"
