@@ -30,6 +30,9 @@ const PERFILES_URL       = process.env.PERFILES_URL       || 'http://localhost:8
 const NOTIFICACIONES_URL = process.env.NOTIFICACIONES_URL || 'http://localhost:8084';
 const VACACIONES_URL     = process.env.VACACIONES_URL     || 'http://localhost:8085';
 
+// Tiempo máximo de espera a un servicio de destino (configurable por entorno)
+const TIMEOUT_PROXY_MS = Number(process.env.PROXY_TIMEOUT_MS) || 15000;
+
 const destinos = { AUTH_URL, EMPLEADOS_URL, DEPARTAMENTOS_URL, PERFILES_URL, NOTIFICACIONES_URL, VACACIONES_URL };
 
 /**
@@ -41,6 +44,9 @@ function crearProxy(target, prefix) {
     return createProxyMiddleware({
         target,
         changeOrigin: true,
+        // Timeouts: un servicio colgado no debe retener al cliente indefinidamente (respuesta 503 uniforme)
+        timeout: TIMEOUT_PROXY_MS,
+        proxyTimeout: TIMEOUT_PROXY_MS,
         pathRewrite: (path) => {
             if (path === '/') return prefix;
             if (path.startsWith('/?')) return prefix + path.substring(1);
