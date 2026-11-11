@@ -125,8 +125,9 @@ demostración del scheduler) solo los puede invocar un ADMIN, sin regla adiciona
 | `NOTIFICACIONES_URL` | URL base de `notificaciones-service` | `http://localhost:8084` |
 | `VACACIONES_URL` | URL base de `vacaciones-service` | `http://localhost:8085` |
 
-`JWT_SECRET` no está en el código: se define en el `.env` de la raíz (ver
-`.env.example`) y `docker-compose.yml` lo inyecta al Gateway y al `auth-service`.
+`JWT_SECRET` no está en el código: es el Docker secret `secrets/jwt_secret` (lo genera
+`scripts/setup-secrets`; plantilla en `secrets.example/`) y `docker-compose.yml` lo monta en el
+Gateway y en el `auth-service`, que lo leen desde `JWT_SECRET_FILE`.
 Dentro de Compose las URLs se sobreescriben con los hostnames internos de la red.
 
 ## Ejecución
@@ -141,7 +142,7 @@ docker compose up -d --build
 # Solo el Gateway, fuera de Docker (requiere JWT_SECRET)
 cd api-gateway
 npm install
-JWT_SECRET=una-clave-academica-de-al-menos-32-caracteres npm start
+JWT_SECRET=<clave-de-32-o-mas-caracteres> npm start
 ```
 
 ## Endpoints propios

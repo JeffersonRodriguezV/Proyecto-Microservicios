@@ -9,4 +9,8 @@ RUN npm ci
 
 COPY . .
 
+# Soporte de Docker Secrets: exporta NOMBRE desde NOMBRE_FILE antes de arrancar el servicio
+COPY --chmod=755 entrypoint-secrets.sh /usr/local/bin/entrypoint-secrets.sh
+ENTRYPOINT ["/usr/local/bin/entrypoint-secrets.sh"]
+
 CMD ["npx", "--no-install", "cucumber-js"]

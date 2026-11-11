@@ -6,7 +6,7 @@ jenkins:
       allowsSignup: false
       users:
         - id: "${JENKINS_ADMIN_ID:-admin}"
-          password: "${JENKINS_ADMIN_PASSWORD}"
+          password: "${jenkins_admin_password}"   # Docker secret: /run/secrets/jenkins_admin_password
   authorizationStrategy:
     loggedInUsersCanDoAnything:
       allowAnonymousRead: false
@@ -29,8 +29,8 @@ credentials:
               scope: GLOBAL
               id: "sonar-token"
               description: "Token de analisis de SonarQube"
-              secret: "${SONAR_TOKEN:-pendiente}"
-          # Credenciales del E2E: se crean desde archivos montados de solo lectura (ver docker-compose.ci.yml).
+              secret: "${sonar_token:-pendiente}"   # Docker secret: /run/secrets/sonar_token
+          # Credenciales del E2E: se crean desde archivos montados de solo lectura (ver docker-compose.yml).
           # Los .env no estan en el repositorio; sobreviven a reinicios y a recrear Jenkins.
           - file:
               scope: GLOBAL

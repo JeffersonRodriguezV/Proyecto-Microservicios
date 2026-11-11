@@ -1,6 +1,6 @@
 apiVersion: 1
 
-# Canal externo: Discord (webhook). La URL viene de la variable DISCORD_WEBHOOK_URL del .env
+# Canal externo: Discord (webhook). La URL se lee del Docker secret discord_webhook_url (secrets/discord_webhook_url)
 contactPoints:
   - orgId: 1
     name: discord-equipo
@@ -8,7 +8,7 @@ contactPoints:
       - uid: discord-equipo
         type: discord
         settings:
-          url: ${DISCORD_WEBHOOK_URL}
+          url: $__file{/run/secrets/discord_webhook_url}
           title: '[{{ .Status | toUpper }}] {{ .CommonLabels.alertname }}'
           message: |
             {{ range .Alerts }}**{{ .Annotations.summary }}**

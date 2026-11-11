@@ -23,4 +23,6 @@ USER app
 COPY --from=build /app/target/*.jar app.jar
 
 EXPOSE 8086
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Soporte de Docker Secrets: exporta NOMBRE desde NOMBRE_FILE antes de arrancar el servicio
+COPY --chmod=755 entrypoint-secrets.sh /usr/local/bin/entrypoint-secrets.sh
+ENTRYPOINT ["/usr/local/bin/entrypoint-secrets.sh", "java", "-jar", "app.jar"]

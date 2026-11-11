@@ -19,4 +19,6 @@ EXPOSE 8083
 HEALTHCHECK --interval=5s --timeout=3s --retries=10 --start-period=15s \
     CMD wget -qO- http://localhost:8083/health || exit 1
 
-ENTRYPOINT ["dotnet", "perfiles-service.dll"]
+# Soporte de Docker Secrets: exporta NOMBRE desde NOMBRE_FILE antes de arrancar el servicio
+COPY --chmod=755 entrypoint-secrets.sh /usr/local/bin/entrypoint-secrets.sh
+ENTRYPOINT ["/usr/local/bin/entrypoint-secrets.sh", "dotnet", "perfiles-service.dll"]
