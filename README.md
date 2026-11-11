@@ -303,7 +303,7 @@ El sistema expone los tres pilares de la observabilidad: **métricas** (Promethe
 
 ```mermaid
 flowchart LR
-    subgraph SVC["Microservicios (red Docker)"]
+    subgraph SVC["Microservicios (red Docker: microservices-network)"]
         GW[api-gateway]
         AU[auth-service]
         EM[empleados-service]
@@ -339,9 +339,19 @@ flowchart LR
 | Loki | `grafana/loki:3.2.1` | solo red interna (`loki:3100`) | Almacena los logs |
 | Promtail | `grafana/promtail:3.2.1` | — | Lee los logs de los contenedores por `docker.sock` y los envía a Loki |
 
-Las URLs entre contenedores usan los nombres de la red de Docker (`zipkin`, `loki`, `prometheus`), no `localhost`.
+Prometheus, Grafana, Zipkin, Loki, Promtail y los siete microservicios pertenecen a la **misma red Docker** (`microservices-network`), por eso Prometheus alcanza a cada servicio por su nombre. Las URLs entre contenedores usan esos nombres (`zipkin`, `loki`, `prometheus`), no `localhost`.
 
 ### Conceptos
+
+**Los tres pilares.** Cada uno responde una pregunta distinta y se complementan:
+
+| Pilar | Pregunta que responde | Rol | Herramienta aquí |
+|---|---|---|---|
+| **Métricas** | ¿Cómo se está comportando el sistema? | Números agregados en el tiempo (tasa de peticiones, latencia, errores, estado `up`). Son baratas y sirven para dashboards y alertas: dicen *que* algo va mal | Prometheus + Grafana |
+| **Logs** | ¿Qué hizo exactamente un servicio? | Eventos con su contexto, en JSON y con `traceId`. Sirven para investigar un caso concreto: dicen *qué* pasó | Loki + Promtail |
+| **Trazas** | ¿Por dónde pasó una petición y dónde se demoró? | El recorrido de una petición a través de todos los servicios, con la duración de cada tramo. Dicen *dónde* está el problema | Zipkin |
+
+A ellos se suma el `/health` de cada servicio (¿está vivo?), que Prometheus consulta de forma indirecta con la métrica `up`.
 
 **Pull vs. Push.** Las métricas usan *pull*: Prometheus consulta `GET /metrics` de cada servicio cada 15 s. Las trazas y los logs usan *push*: el servicio envía sus spans a Zipkin y Promtail envía los logs a Loki.
 
@@ -353,7 +363,7 @@ Las URLs entre contenedores usan los nombres de la red de Docker (`zipkin`, `lok
 
 Por eso la alerta "Servicio caído" se apoya en `up` (pull), que es justo lo que el push no puede dar.
 
-**OpenTelemetry (OTel).** Estándar abierto e independiente del proveedor para instrumentar aplicaciones (API, SDK, exportadores y propagadores). Se instrumenta una sola vez y solo cambia el *exportador*: aquí todos exportan a Zipkin, pero cambiar a Jaeger sería cambiar un exportador, no reescribir la instrumentación. Existe SDK para los cinco lenguajes del ecosistema (Java, Node.js, Python, Go y .NET).
+**OpenTelemetry (OTel).** Proyecto de la **CNCF** (Cloud Native Computing Foundation, la fundación neutral que también aloja a Kubernetes y Prometheus) y estándar abierto, independiente del proveedor, para instrumentar aplicaciones (API, SDK, exportadores y propagadores). Se instrumenta una sola vez y solo cambia el *exportador*: aquí todos exportan a Zipkin, pero cambiar a Jaeger sería cambiar un exportador, no reescribir la instrumentación. Existe SDK para los cinco lenguajes del ecosistema (Java, Node.js, Python, Go y .NET).
 
 **W3C Trace Context.** Estándar para propagar el contexto de una traza entre servicios mediante la cabecera `traceparent`:
 
