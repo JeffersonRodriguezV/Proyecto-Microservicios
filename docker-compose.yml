@@ -478,6 +478,7 @@ services:
       - "3000:3000"
     environment:
       GF_SECURITY_ADMIN_USER: admin
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/provisioning/dashboards/sistema.json
       GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana_admin_password
     # La URL del webhook de Discord se lee del secreto con $__file{} en alerting.yml
     secrets: [grafana_admin_password, discord_webhook_url]
@@ -509,7 +510,7 @@ services:
       - "9090:8080"    # UI web
       - "50000:50000"  # agentes
     environment:
-      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false -Dhudson.model.DirectoryBrowserSupport.CSP="sandbox allow-scripts; default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:"
       - CASC_JENKINS_CONFIG=/var/jenkins_home/casc_configs
       - JENKINS_ADMIN_ID=${JENKINS_ADMIN_ID:-admin}
       # JCasC lee ${jenkins_admin_password} y ${sonar_token} directamente de /run/secrets

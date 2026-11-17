@@ -7,6 +7,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
 @EnableRetry
+@EnableScheduling
 public class GestionempleadosApplication {
 
 	public static void main(String[] args) {

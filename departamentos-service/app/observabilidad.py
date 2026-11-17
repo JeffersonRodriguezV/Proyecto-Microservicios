@@ -128,4 +128,10 @@ def configurar_observabilidad(app: FastAPI, motor=None) -> None:
     configurar_logging()
     registrar_log_de_acceso(app)   # primero: así queda dentro del span de FastAPIInstrumentor y lleva traceId
     configurar_metricas(app)
+    if motor is not None:
+        from app.metricas_bd import registrar_metricas_bd
+        try:
+            registrar_metricas_bd(motor)
+        except ValueError:  # ya registrado (recarga en pruebas)
+            pass
     configurar_trazas(app, motor)

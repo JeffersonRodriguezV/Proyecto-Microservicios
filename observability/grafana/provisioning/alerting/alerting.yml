@@ -95,3 +95,25 @@ groups:
           - refId: C
             datasourceUid: __expr__
             model: { refId: C, type: threshold, expression: B, conditions: [{ evaluator: { type: gt, params: [0.05] } }] }
+
+      - uid: bd-caida
+        title: Base de datos caída
+        condition: C
+        for: 1m
+        noDataState: OK
+        execErrState: Error
+        labels: { severidad: critica }
+        annotations:
+          summary: 'Base de datos caída (visto desde {{ $labels.job }})'
+          description: 'El servicio sigue vivo pero no logra consultar su base de datos (bd_disponible == 0) desde hace más de 1 minuto.'
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, expr: '{__name__=~"(empleados|departamentos)_bd_disponible"}', instant: true }
+          - refId: B
+            datasourceUid: __expr__
+            model: { refId: B, type: reduce, expression: A, reducer: last }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: B, conditions: [{ evaluator: { type: lt, params: [1] } }] }

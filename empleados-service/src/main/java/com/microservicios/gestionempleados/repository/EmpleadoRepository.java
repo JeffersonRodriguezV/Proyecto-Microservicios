@@ -34,6 +34,20 @@ public interface EmpleadoRepository extends JpaRepository <Empleado, Integer >{
 
     List<Empleado> findByEstado(EstadoEmpleado estado);
 
+    /** Cuenta empleados por estado (metricas de base de datos). */
+    long countByEstado(EstadoEmpleado estado);
+
+    /** Cuenta empleados con departamento sin confirmar (metricas de base de datos). */
+    long countByDepartamentoValidadoFalse();
+
+    /** Empleados vigentes (no RETIRADO) agrupados por departamento (metricas de base de datos). */
+    @org.springframework.data.jpa.repository.Query(
+            "select new com.microservicios.gestionempleados.repository.ConteoPorDepartamento("
+                    + "e.departamentoId, count(e)) from Empleado e "
+                    + "where e.estado <> com.microservicios.gestionempleados.model.enume.EstadoEmpleado.RETIRADO "
+                    + "group by e.departamentoId")
+    List<ConteoPorDepartamento> contarVigentesPorDepartamento();
+
     List<Empleado> findByEstadoAndFechaRetiroBetween(
             EstadoEmpleado estado, LocalDateTime desde, LocalDateTime hasta);
 

@@ -38,8 +38,14 @@ pipeline {
                         sh '''
                             cd e2e-tests
                             npm ci
-                            BASE_URL=http://host.docker.internal:8080 npx cucumber-js || true
+                            mkdir -p reports
+                            # Los reportes se generan SIEMPRE; si hay escenarios fallidos el build queda UNSTABLE (no en blanco)
+                            BASE_URL=http://host.docker.internal:8080 npx cucumber-js || touch reports/.hubo-fallos
+                            chmod -R a+rwX reports
                         '''
+                        if (fileExists('e2e-tests/reports/.hubo-fallos')) {
+                            unstable('Hay escenarios BDD fallidos')
+                        }
                     }
                 }
             }
@@ -54,8 +60,9 @@ pipeline {
                         }
                     }
                     publishHTML(target: [reportDir: 'e2e-tests/reports', reportFiles: 'cucumber.html',
-                                         reportName: 'Reporte BDD', keepAll: true,
-                                         alwaysLinkToLastBuild: true, allowMissing: true])
+                                         reportName: 'Reporte-BDD', reportTitles: 'Reporte BDD (Cucumber)',
+                                         keepAll: true, alwaysLinkToLastBuild: true, allowMissing: true])
+                    archiveArtifacts artifacts: 'e2e-tests/reports/**', allowEmptyArchive: true
                     sh '$COMPOSE logs --no-color > docker-logs.txt || true'
                     archiveArtifacts artifacts: 'docker-logs.txt', allowEmptyArchive: true
                     sh '''
