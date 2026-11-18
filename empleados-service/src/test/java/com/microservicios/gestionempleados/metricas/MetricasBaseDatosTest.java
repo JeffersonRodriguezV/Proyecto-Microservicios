@@ -45,9 +45,9 @@ class MetricasBaseDatosTest {
         metricas.refrescar();
 
         assertEquals(1.0, registro.get("empleados.bd.disponible").gauge().value());
-        assertEquals(5.0, registro.get("empleados.bd.total").tag("estado", "ACTIVO").gauge().value());
-        assertEquals(2.0, registro.get("empleados.bd.total").tag("estado", "EN_VACACIONES").gauge().value());
-        assertEquals(1.0, registro.get("empleados.bd.total").tag("estado", "RETIRADO").gauge().value());
+        assertEquals(5.0, registro.get("empleados.bd.por_estado").tag("estado", "ACTIVO").gauge().value());
+        assertEquals(2.0, registro.get("empleados.bd.por_estado").tag("estado", "EN_VACACIONES").gauge().value());
+        assertEquals(1.0, registro.get("empleados.bd.por_estado").tag("estado", "RETIRADO").gauge().value());
         assertEquals(3.0, registro.get("empleados.bd.sin_validar").gauge().value());
         assertEquals(4.0, registro.get("empleados.bd.por_departamento").tag("departamento", "TI").gauge().value());
         assertEquals(3.0, registro.get("empleados.bd.por_departamento").tag("departamento", "RH").gauge().value());
@@ -63,6 +63,19 @@ class MetricasBaseDatosTest {
         metricas.refrescar();
 
         assertEquals(0.0, registro.get("empleados.bd.disponible").gauge().value());
-        assertEquals(7.0, registro.get("empleados.bd.total").tag("estado", "ACTIVO").gauge().value());
+        assertEquals(7.0, registro.get("empleados.bd.por_estado").tag("estado", "ACTIVO").gauge().value());
+    }
+
+    @Test
+    void publicaSoloLosDiezMayoresDepartamentosYAgrupaElRestoEnOtros() {
+        when(repo.contarVigentesPorDepartamento()).thenReturn(java.util.stream.IntStream.rangeClosed(1, 13)
+                .mapToObj(i -> new ConteoPorDepartamento("D" + String.format("%02d", i), i)).toList());
+
+        metricas.refrescar();
+
+        // Mayores: D13..D04. Quedan fuera D03, D02, D01 (3+2+1 = 6) -> "otros"
+        assertEquals(13.0, registro.get("empleados.bd.por_departamento").tag("departamento", "D13").gauge().value());
+        assertEquals(6.0, registro.get("empleados.bd.por_departamento").tag("departamento", "otros").gauge().value());
+        assertEquals(11, registro.find("empleados.bd.por_departamento").gauges().size());
     }
 }

@@ -23,8 +23,8 @@ import java.util.concurrent.atomic.AtomicLong;
  * Describen el CONTENIDO y la SALUD de la base, no el trafico HTTP:
  *
  *  - empleados_bd_disponible                    1 si la ultima lectura a MySQL funciono, 0 si fallo
- *  - empleados_bd_total{estado}                 empleados por estado (ACTIVO, EN_VACACIONES, RETIRADO)
- *  - empleados_bd_por_departamento{departamento} empleados vigentes (no retirados) por departamento
+ *  - empleados_bd_por_estado{estado}                 empleados por estado (ACTIVO, EN_VACACIONES, RETIRADO)
+ *  - empleados_bd_por_departamento{departamento} vigentes (no retirados): los 10 mayores y "otros"
  *  - empleados_bd_sin_validar                   empleados con departamento aun sin confirmar
  *
  * Decisiones de diseno:
@@ -56,7 +56,7 @@ public class MetricasBaseDatos {
         for (EstadoEmpleado estado : EstadoEmpleado.values()) {
             AtomicLong valor = new AtomicLong();
             porEstado.put(estado, valor);
-            Gauge.builder("empleados.bd.total", valor, AtomicLong::get)
+            Gauge.builder("empleados.bd.por_estado", valor, AtomicLong::get)
                     .description("Empleados registrados en la base de datos, por estado")
                     .tag("estado", estado.name())
                     .register(registro);
@@ -91,11 +91,22 @@ public class MetricasBaseDatos {
         }
     }
 
-    /** Reemplaza todas las filas: un departamento que ya no tiene empleados vigentes desaparece de la serie. */
+    /** Departamentos que se publican individualmente; el resto se suma en "otros" para no inflar la cardinalidad. */
+    static final int MAX_DEPARTAMENTOS = 10;
+
+    /** Reemplaza todas las filas: un departamento sin empleados vigentes desaparece de la serie. */
     private void actualizarPorDepartamento(List<ConteoPorDepartamento> conteos) {
-        List<MultiGauge.Row<?>> filas = conteos.stream()
-                .<MultiGauge.Row<?>>map(c -> MultiGauge.Row.of(Tags.of("departamento", c.departamentoId()), c.total()))
+        List<ConteoPorDepartamento> ordenados = conteos.stream()
+                .sorted(java.util.Comparator.comparingLong(ConteoPorDepartamento::total).reversed()
+                        .thenComparing(ConteoPorDepartamento::departamentoId))
                 .toList();
+        List<MultiGauge.Row<?>> filas = new java.util.ArrayList<>();
+        ordenados.stream().limit(MAX_DEPARTAMENTOS).forEach(c ->
+                filas.add(MultiGauge.Row.of(Tags.of("departamento", c.departamentoId()), c.total())));
+        long otros = ordenados.stream().skip(MAX_DEPARTAMENTOS).mapToLong(ConteoPorDepartamento::total).sum();
+        if (otros > 0) {
+            filas.add(MultiGauge.Row.of(Tags.of("departamento", "otros"), otros));
+        }
         porDepartamento.register(filas, true);
     }
 }

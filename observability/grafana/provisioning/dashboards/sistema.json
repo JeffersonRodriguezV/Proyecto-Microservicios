@@ -1381,7 +1381,7 @@
       },
       "targets": [
         {
-          "expr": "empleados_bd_total",
+          "expr": "empleados_bd_por_estado",
           "legendFormat": "{{estado}}",
           "refId": "A",
           "datasource": {
